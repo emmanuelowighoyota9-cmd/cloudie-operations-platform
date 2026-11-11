@@ -56,7 +56,12 @@ DATABASE_URL="postgresql://<user>:<password>@<neon-host>/<dbname>?sslmode=requir
 
 ## 2. Backend API (Vercel Functions + Turso)
 
-The API is exposed through [`api/index.ts`](./api/index.ts) and the repository-root [`vercel.json`](./vercel.json), which rewrites `/api/:path*` to that single function while preserving the original path for Hono's router. Bracket catch-all filenames (`api/[...path].js`) are Next.js-only and silently fall through to the SPA on a Vite project, so do not reintroduce one. Deploy the repository root to Vercel. The same server runs as a normal Node process on Render via [`render.yaml`](./render.yaml).
+The API is exposed as a single function at `api/index.js` and the repository-root [`vercel.json`](./vercel.json), which rewrites `/api/:path*` to it while preserving the original path for Hono's router. Two details keep that working:
+
+- `api/index.js` is **generated** by [`scripts/build-vercel-api.mjs`](./scripts/build-vercel-api.mjs) from [`backend/src/vercel-entry.ts`](./backend/src/vercel-entry.ts) during `npm run build`, and is committed so the deploy never depends on build ordering. Do not edit it by hand.
+- It is a pre-bundled `.js` on purpose. Vercel transpiles every `.ts` file under `api/` with its own compiler, which discards the tsconfig's `files`/`include`; this repo's root tsconfig is solution-style (`"files": []` + `references`), so a TypeScript function there fails with `api/index.ts: Emit skipped`.
+
+Bracket catch-all filenames (`api/[...path].js`) are Next.js-only and silently fall through to the SPA on a Vite project, so do not reintroduce one. Deploy the repository root to Vercel. The same server runs as a normal Node process on Render via [`render.yaml`](./render.yaml).
 
 - **Build command:** `npm install && npm run build`
 - **API route:** `/api/*` handled by the Vercel catch-all function
