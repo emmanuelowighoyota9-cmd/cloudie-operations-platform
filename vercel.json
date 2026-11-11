@@ -4,6 +4,11 @@
   "installCommand": "npm install --include=dev --legacy-peer-deps --no-audit --no-fund",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "migrations/turso/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",

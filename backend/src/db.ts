@@ -96,6 +96,15 @@ export class TursoPool {
     return new TursoConnection(this.getClient());
   }
 
+  /**
+   * Runs a multi-statement SQL script (migration files contain several
+   * statements, including trigger bodies). `query()` sends one statement at a
+   * time, so schema work needs this instead.
+   */
+  async executeScript(sql: string): Promise<void> {
+    await this.getClient().executeMultiple(sql);
+  }
+
   async end(): Promise<void> {
     this.client?.close();
     this.client = undefined;

@@ -88,12 +88,119 @@ var TursoPool = class {
   async connect() {
     return new TursoConnection(this.getClient());
   }
+  /**
+   * Runs a multi-statement SQL script (migration files contain several
+   * statements, including trigger bodies). `query()` sends one statement at a
+   * time, so schema work needs this instead.
+   */
+  async executeScript(sql) {
+    await this.getClient().executeMultiple(sql);
+  }
   async end() {
     this.client?.close();
     this.client = void 0;
   }
 };
 var pool = new TursoPool();
+
+// backend/src/auto-migrate.ts
+import { existsSync } from "node:fs";
+import { dirname, join as join2, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// backend/turso-migrations.mjs
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+var LEDGER_DDL = "CREATE TABLE IF NOT EXISTS _turso_migrations (version TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE, checksum TEXT NOT NULL, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+function checksumOf(sql) {
+  return createHash("sha256").update(sql.replace(/\r\n/g, "\n").trim()).digest("hex");
+}
+function discoverMigrations(directory) {
+  return readdirSync(directory).filter((file) => /^\d{3}_.+\.sql$/.test(file)).sort().map((filename) => {
+    const sql = readFileSync(join(directory, filename), "utf8");
+    return { filename, version: filename.slice(0, 3), sql, checksum: checksumOf(sql) };
+  });
+}
+async function applyMigrations(client, migrations, { log = () => {
+} } = {}) {
+  await client.execute(LEDGER_DDL);
+  const existing = await client.execute(
+    "SELECT version, filename, checksum FROM _turso_migrations ORDER BY version"
+  );
+  const applied = new Map(existing.rows.map((row) => [String(row.version), row]));
+  const newlyApplied = [];
+  for (const migration of migrations) {
+    const recorded = applied.get(migration.version);
+    if (recorded) {
+      if (String(recorded.checksum) !== migration.checksum) {
+        throw new Error(`Turso migration checksum drift: ${migration.filename}`);
+      }
+      log(`[turso:migrate] Already applied ${migration.filename}`);
+      continue;
+    }
+    log(`[turso:migrate] Applying ${migration.filename}`);
+    const quote = (value) => "'" + String(value).replace(/'/g, "''") + "'";
+    const script = [
+      "BEGIN IMMEDIATE;",
+      migration.sql,
+      `INSERT INTO _turso_migrations (version, filename, checksum) VALUES (${quote(migration.version)}, ${quote(migration.filename)}, ${quote(migration.checksum)});`,
+      "COMMIT;"
+    ].join("\n");
+    try {
+      await client.executeMultiple(script);
+    } catch (error) {
+      await client.execute("ROLLBACK").catch(() => void 0);
+      throw error;
+    }
+    newlyApplied.push(migration.filename);
+  }
+  return { applied: newlyApplied, alreadyApplied: applied.size };
+}
+
+// backend/src/auto-migrate.ts
+var pending;
+function migrationsDir() {
+  const candidates = [
+    join2(process.cwd(), "migrations", "turso"),
+    resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "migrations", "turso")
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+async function runOnce() {
+  if (!process.env.TURSO_DATABASE_URL?.trim()) return;
+  if (process.env.CLOUDIE_AUTO_MIGRATE === "0") return;
+  const directory = migrationsDir();
+  if (!directory) {
+    console.warn("[auto-migrate] migrations directory not found; skipping schema check");
+    return;
+  }
+  const migrations = discoverMigrations(directory);
+  if (!migrations.length) return;
+  const client = {
+    execute: (sql) => pool.query(sql),
+    executeMultiple: (sql) => pool.executeScript(sql)
+  };
+  const result = await applyMigrations(client, migrations);
+  if (result.applied.length) {
+    console.log(`[auto-migrate] applied ${result.applied.join(", ")}`);
+  }
+}
+function ensureSchema() {
+  if (!pending) {
+    pending = runOnce().catch((error) => {
+      pending = void 0;
+      console.error(
+        "[auto-migrate] failed:",
+        error instanceof Error ? error.message : String(error)
+      );
+    });
+  }
+  return pending;
+}
 
 // backend/src/server.ts
 import { promisify } from "node:util";
@@ -153,6 +260,13 @@ app.use("*", async (c, next) => {
         return c.json({ error: "CSRF validation failed" }, 403);
       }
     }
+  }
+  await next();
+});
+app.use("*", async (c, next) => {
+  const path = c.req.path;
+  if (path.startsWith("/api/") && path !== "/api/health" && path !== "/api/turso-health") {
+    await ensureSchema();
   }
   await next();
 });
@@ -1228,7 +1342,7 @@ var shuttingDown = false;
 var shutdown = async () => {
   if (shuttingDown) return;
   shuttingDown = true;
-  if (server) await new Promise((resolve) => server.close(() => resolve()));
+  if (server) await new Promise((resolve2) => server.close(() => resolve2()));
   await pool.end();
   process.exit(0);
 };

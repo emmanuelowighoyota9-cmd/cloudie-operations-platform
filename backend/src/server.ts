@@ -5,6 +5,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { SignJWT, jwtVerify } from "jose";
 import { pool, type QueryResultRow } from "./db.js";
 export { pool };
+import { ensureSchema } from "./auto-migrate.js";
 import { promisify } from "node:util";
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -84,6 +85,18 @@ app.use("*", async (c, next) => {
         return c.json({ error: "CSRF validation failed" }, 403);
       }
     }
+  }
+  await next();
+});
+
+// Self-provisioning schema. A deployment can hold working database credentials
+// for a database that has never had migrations applied, and every auth route
+// then fails with a generic 500. Running the pending migrations here means the
+// first request after a cold start fixes that instead of reporting it.
+app.use("*", async (c, next) => {
+  const path = c.req.path;
+  if (path.startsWith("/api/") && path !== "/api/health" && path !== "/api/turso-health") {
+    await ensureSchema();
   }
   await next();
 });
