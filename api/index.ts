@@ -1,4 +1,8 @@
-import { app } from "../backend/src/server.ts";
+// `.js`, not `.ts`: Vercel transpiles each traced file to JavaScript and lets
+// the Node ESM loader resolve relative imports at runtime, so the specifier has
+// to name the emitted file. TypeScript resolves `./server.js` back to
+// `server.ts`, and the backend is written the same way throughout (`./db.js`).
+import { app } from "../backend/src/server.js";
 
 // One function for every API route on Vercel.
 //
