@@ -28,6 +28,7 @@ import {
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { MobileNav } from "./MobileNav";
+import { ThemeToggle } from "./ThemeToggle";
 import { AppSearch } from "./AppSearch";
 import { formatNgn, usePricing } from "@/lib/pricing";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
@@ -43,8 +44,8 @@ const LOW_BALANCE_POINTS = 100;
  * brand, the points balance and the account menu. From `sm` up the real search
  * field appears; from `md` the account name joins it.
  *
- * There is no theme switch: Cloudie is dark-only, and the toggle that used to
- * live here repainted nothing.
+ * The theme switch lives beside the notification bell: it repaints the whole
+ * app between the daylight and black palettes.
  */
 export function Header() {
   const { user, signOut } = useAuth();
@@ -141,6 +142,8 @@ export function Header() {
             )}
           </Badge>
         </Link>
+
+        <ThemeToggle />
 
         <Link to="/notifications">
           <Button

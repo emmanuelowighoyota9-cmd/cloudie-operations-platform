@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { brandCssVars } from "@/lib/platformConfig";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
+import { useTheme } from "@/components/ThemeProvider";
 
 /**
  * Applies admin-configured branding at runtime:
@@ -11,6 +12,7 @@ import { usePlatformConfig } from "@/hooks/use-platform-config";
  */
 export function PlatformBranding() {
   const { brand } = usePlatformConfig();
+  const { setDefaultTheme } = useTheme();
 
   useEffect(() => {
     const id = "cloudie-brand-tokens";
@@ -23,28 +25,15 @@ export function PlatformBranding() {
     el.textContent = brandCssVars(brand);
   }, [brand]);
 
-  // Cloudie is dark-only, so the colour scheme is pinned here rather than read
-  // from the stored brand config. A configured "light" default would strip the
-  // `dark` class and silently strand every `dark:` utility in the app on
-  // colours this design system no longer defines.
+  // The administrator's "default theme" is the fallback for visitors who have
+  // not chosen one themselves; `ThemeProvider` owns the class on <html> and the
+  // per-visitor preference, so this only feeds it a default.
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("light");
-    root.classList.add("dark");
-    root.style.colorScheme = "dark";
-  }, []);
+    setDefaultTheme(brand.defaultMode);
+  }, [brand.defaultMode, setDefaultTheme]);
 
   useEffect(() => {
     document.title = `${brand.name} · ${brand.tagline}`;
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (!meta) return;
-    // Browser chrome frames a black page, so it takes the background token
-    // rather than the accent — an emerald status bar around black content reads
-    // as a rendering glitch.
-    const background = getComputedStyle(document.documentElement)
-      .getPropertyValue("--background")
-      .trim();
-    meta.setAttribute("content", background || "#000000");
   }, [brand.name, brand.tagline]);
 
   return null;

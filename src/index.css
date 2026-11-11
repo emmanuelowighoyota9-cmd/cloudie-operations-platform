@@ -76,16 +76,107 @@
 /* ════════════════════════════════════════════════════════════════════
    CLOUDIE DESIGN SYSTEM — the single source of truth for colour.
 
-   Pure-black enterprise surface, white ink, one emerald accent. Pages and
-   components read the semantic tokens only (`bg-background`, `bg-card`,
+   Two palettes, one set of token names. `:root` is the daylight theme —
+   warm paper, white panels, graphite ink, deeper emerald; `.dark` is the
+   pure-black enterprise theme with white ink. Pages and components read
+   the semantic tokens only (`bg-background`, `bg-card`,
    `text-muted-foreground`, `text-success`, `border-border`, …) — no page
-   declares its own palette, so one edit here restyles the whole platform.
+   declares its own palette, so one edit here restyles both themes, and
+   every `dark:` utility across the app keeps resolving usefully.
 
-   `.dark` is aliased to the same values on purpose: the product is
-   dark-only, and every `dark:` utility written before this system existed
-   must keep resolving to exactly what `:root` resolves to.
+   `ThemeProvider` decides which theme is active by putting `.light` or
+   `.dark` on <html>; this file only describes what each one looks like.
    ════════════════════════════════════════════════════════════════════ */
-:root,
+:root {
+  color-scheme: light;
+  --radius: 0.75rem;
+
+  /* Surfaces — warm paper page, white panels lifted in three steps. */
+  --background: #f6f6f4; /* primary background */
+  --surface: #fbfbfa; /* secondary background (top bars) */
+  --sidebar: #ffffff; /* sidebar background */
+  --card: #ffffff; /* card background */
+  --surface-2: #f1f1ee; /* elevated surface / inset fills */
+  --elevated: #ffffff;
+  --popover: #ffffff;
+
+  /* Ink */
+  --foreground: #121215; /* primary text */
+  --muted-foreground: #5b5b64; /* secondary text */
+  --card-foreground: #121215;
+  --popover-foreground: #121215;
+
+  /* Lines */
+  --border: #e5e5e1; /* borders and dividers */
+  --input: #dcdcd7;
+
+  /* Brand accent — emerald, deepened so it holds 4.5:1 on white for links
+     and inline labels while still carrying white button ink. */
+  --primary: #047857;
+  --primary-hover: #065f46;
+  --primary-foreground: #ffffff;
+  --ring: #059669;
+
+  /* Interaction fills. `accent` is the hover/selected surface, not a brand
+     colour — that is what `primary` is for. */
+  --accent: #eeeeea;
+  --accent-foreground: #121215;
+  --secondary: #f0f0ed;
+  --secondary-foreground: #121215;
+  --muted: #f0f0ed;
+
+  /* Status. These four carry meaning and must never be the only signal —
+     every status surface also prints a word (see `StatusBadge`). */
+  --success: #15803d;
+  --warning: #b45309;
+  --error: #b91c1c;
+  --info: #1d4ed8;
+  --destructive: #b91c1c;
+
+  /* Sidebar */
+  --sidebar-foreground: #121215;
+  --sidebar-primary: #047857;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f0ed;
+  --sidebar-accent-foreground: #121215;
+  --sidebar-border: #e5e5e1;
+  --sidebar-ring: #059669;
+
+  /* Data visualisation */
+  --chart-1: #047857;
+  --chart-2: #1d4ed8;
+  --chart-3: #15803d;
+  --chart-4: #71717a;
+  --chart-5: #b45309;
+
+  /* Paper is lit from above, so shadows read as soft graphite haze. */
+  --shadow-color: 220 20% 40%;
+
+  /* VTU (airtime, data, bills) runs on the same system — a customer-facing
+     shop is not a licence for a second brand. */
+  --vtu-canvas: #f6f6f4;
+  --vtu-card: #ffffff;
+  --vtu-text: #121215;
+  --vtu-muted: #5b5b64;
+  --vtu-line: #e5e5e1;
+  --vtu-chip: #f0f0ed;
+  --vtu-band: #ececea;
+  --vtu-band-fg: #121215;
+  --vtu-accent: #047857;
+  --vtu-accent-ink: #ffffff;
+  /* Network brands are content, not chrome — they stay recognisable. */
+  --vtu-brand-mtn: #e8c31c;
+  --vtu-brand-airtel: #d62828;
+  --vtu-brand-glo: #2f8b40;
+  --vtu-brand-9mobile: #10b981;
+
+  /* Aliases older surfaces still read. */
+  --nb-bg: var(--background);
+  --nb-surface: var(--card);
+  --nb-ink: var(--foreground);
+  --nb-rule: var(--border);
+}
+
 .dark {
   color-scheme: dark;
   --radius: 0.75rem;
@@ -1192,7 +1283,7 @@ option {
    Every page in this product was written against a light theme, so a great many
    elements carry classes like `text-slate-900 border-slate-200 bg-slate-50`.
    Most of them are paired with a `dark:` variant, but ~800 individual utilities
-   across ~58 files are not — and on a pure-black page `text-slate-900` is
+   across ~58 files are not — and in the black theme `text-slate-900` is
    invisible ink.
 
    Rather than rewrite two thousand class strings (and risk changing the ones
@@ -1256,20 +1347,43 @@ option {
   [class*="bg-slate-1"]:not(:where(.paper-surface *)),
   [class*="bg-slate-2"]:not(:where(.paper-surface *)),
   [class*="bg-slate-3"]:not(:where(.paper-surface *)),
-  [class*="bg-slate-7"]:not(:where(.paper-surface *)),
-  [class*="bg-slate-8"]:not(:where(.paper-surface *)),
-  [class*="bg-slate-9"]:not(:where(.paper-surface *)),
   [class*="bg-gray-1"]:not(:where(.paper-surface *)),
   [class*="bg-gray-2"]:not(:where(.paper-surface *)),
   [class*="bg-gray-3"]:not(:where(.paper-surface *)),
-  [class*="bg-gray-7"]:not(:where(.paper-surface *)),
-  [class*="bg-gray-8"]:not(:where(.paper-surface *)),
-  [class*="bg-gray-9"]:not(:where(.paper-surface *)),
   [class*="bg-zinc-1"]:not(:where(.paper-surface *)),
   [class*="bg-zinc-2"]:not(:where(.paper-surface *)),
-  [class*="bg-zinc-3"]:not(:where(.paper-surface *)),
-  [class*="bg-zinc-8"]:not(:where(.paper-surface *)),
-  [class*="bg-zinc-9"]:not(:where(.paper-surface *)) {
+  [class*="bg-zinc-3"]:not(:where(.paper-surface *)) {
+    background-color: var(--surface-2);
+  }
+
+  /* Dark grey FILLS are "inverse panels": a near-black block carrying light
+     ink, usually a primary button. On paper that is exactly what they should
+     stay — a dark chip on a light page — so they map to the ink colour. The
+     black theme lifts them into a panel instead, because a black block on a
+     black page is a hole, not a surface.
+
+     Both selectors are wrapped in `:where()` so they keep a Tailwind
+     utility's specificity (0,1,0) and still lose to a `dark:` variant. The
+     `dark:bg-` exclusion keeps a light-first pairing like
+     `bg-white dark:bg-slate-900` out of this rule — the sub-string "bg-slate-9"
+     appears in that class list even though the element is white in daylight. */
+  :where(html:not(.dark)) [class*="bg-slate-7"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(html:not(.dark)) [class*="bg-slate-8"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(html:not(.dark)) [class*="bg-slate-9"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(html:not(.dark)) [class*="bg-gray-8"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(html:not(.dark)) [class*="bg-gray-9"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(html:not(.dark)) [class*="bg-zinc-8"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(html:not(.dark)) [class*="bg-zinc-9"]:not(:where(.paper-surface *, [class*="dark:bg-"])) {
+    background-color: var(--foreground);
+  }
+
+  :where(.dark) [class*="bg-slate-7"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(.dark) [class*="bg-slate-8"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(.dark) [class*="bg-slate-9"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(.dark) [class*="bg-gray-8"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(.dark) [class*="bg-gray-9"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(.dark) [class*="bg-zinc-8"]:not(:where(.paper-surface *, [class*="dark:bg-"])),
+  :where(.dark) [class*="bg-zinc-9"]:not(:where(.paper-surface *, [class*="dark:bg-"])) {
     background-color: var(--surface-2);
   }
 

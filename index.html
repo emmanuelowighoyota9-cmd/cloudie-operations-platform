@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -8,8 +8,9 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Cloudie Operations is a unified operations platform for shipments, tracking, documents, payments and airtime, drawn on one points balance." />
-  <!-- Matches --background: the browser chrome frames a pure-black page. -->
-  <meta name="theme-color" content="#000000" />
+  <!-- Matches --background in the daylight theme. The app rewrites this to the
+       active palette's background once the theme is resolved. -->
+  <meta name="theme-color" content="#f6f6f4" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -29,6 +30,35 @@
   <meta property="og:url" content="https://cloudie.wuaze.com/" />
   <meta name="twitter:card" content="summary" />
   <title>Cloudie Operations · Unified operations platform</title>
+  <!-- Paints the right palette before React mounts, so a visitor who chose dark
+       never sees a white flash (and vice versa). `ThemeProvider` takes over
+       once the administrator's default theme is known. -->
+  <script>
+    (function () {
+      var theme = "light";
+      try {
+        var stored = localStorage.getItem("cloudie-theme");
+        if (stored === "light" || stored === "dark") {
+          theme = stored;
+        } else if (
+          stored === "system" &&
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+        ) {
+          theme = "dark";
+        }
+      } catch (error) {
+        /* Storage blocked — the daylight default is fine. */
+      }
+      var root = document.documentElement;
+      root.classList.add(theme);
+      root.style.colorScheme = theme;
+      if (theme === "dark") {
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", "#000000");
+      }
+    })();
+  </script>
 </head>
 
 

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buildPreviewSvg, categoryDef, defaultValues, svgToDataUrl } from "@/lib/docTemplateEngine";
 import { PLATFORM_TEMPLATES } from "@/lib/platformTemplates";
 import { PwaInstallBanner, PwaInstallButton } from "@/components/PwaInstallPrompt";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
 import {
   Accordion,
@@ -201,6 +202,7 @@ export default function Landing() {
             </Link>
           </nav>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <PwaInstallButton />
             <Link to="/login">
               <Button variant="ghost" size="sm">Sign in</Button>

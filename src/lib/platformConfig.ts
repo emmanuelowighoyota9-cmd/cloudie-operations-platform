@@ -79,13 +79,13 @@ export const QUICK_ACTION_CATALOG: QuickActionCatalogItem[] = [
 export const DEFAULT_BRAND: BrandConfig = {
   name: "Cloudie Operations",
   tagline: "Shipment, document & payments workspace",
-  // Both modes carry the enterprise emerald. The product ships dark-only, so
-  // `accent` and `accentDark` are kept in step rather than drifting apart.
-  accent: "#10b981",
+  // The accent is the enterprise emerald in both themes, deepened for daylight
+  // so it holds 4.5:1 against white paper and can carry white button ink.
+  accent: "#047857",
   accentDark: "#10b981",
   footerNote: "Move every shipment with confidence.",
   logoUrl: "",
-  defaultMode: "dark",
+  defaultMode: "light",
 };
 
 export const DEFAULT_QUICK_ACTIONS: QuickActionConfig[] = [
@@ -242,15 +242,17 @@ function accentBlock(accent: string, foreground: string): string {
  * CSS injected at runtime so an admin-chosen accent wins over the design
  * tokens.
  *
- * Cloudie is a dark-only product: one black surface, one accent. So this emits
- * a single block applied to both `:root` and `.dark` instead of two competing
- * palettes. The accent lives on `accentDark` because every surface an accent
- * is drawn against is a dark one.
+ * One block per palette, because the two need different accents: the daylight
+ * emerald is deeper so it stays legible on white paper, the black theme keeps
+ * the brighter one. `:root` is emitted first and `.dark` second, so on the
+ * <html> element the dark block wins whenever the theme class is present.
  */
 export function brandCssVars(brand: BrandConfig): string {
-  const accent = brand.accentDark;
-  const foreground = isLight(accent) ? "#04120c" : "#ffffff";
-  return `:root,.dark{${accentBlock(accent, foreground)}}`;
+  const ink = (accent: string) => (isLight(accent) ? "#04120c" : "#ffffff");
+  return [
+    `:root{${accentBlock(brand.accent, ink(brand.accent))}}`,
+    `.dark{${accentBlock(brand.accentDark, ink(brand.accentDark))}}`,
+  ].join("");
 }
 
 export function supportHasContact(support: SupportConfig): boolean {

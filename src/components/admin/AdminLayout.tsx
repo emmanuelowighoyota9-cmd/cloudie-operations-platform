@@ -39,6 +39,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AppSearch } from "@/components/AppSearch";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type AdminItem = { to: string; label: string; icon: LucideIcon; exact?: boolean; badge?: "openFlags" | "pendingKyc" | "pendingVendors" | "openDisputes"; pendingScope?: "pricing" | "catalog" };
 type AdminGroup = { label: GroupLabel; items: AdminItem[] };
@@ -353,6 +354,8 @@ function AdminShell() {
               <AppSearch />
             </div>
           </div>
+
+          <ThemeToggle />
 
           <Button
             variant="ghost"
