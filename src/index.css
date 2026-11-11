@@ -65,6 +65,30 @@
   --color-vtu-brand-glo: var(--vtu-brand-glo);
   --color-vtu-brand-9mobile: var(--vtu-brand-9mobile);
 
+  /* Cloudie fintech chrome — admin command center, tenant portal, auth. */
+  --color-navy: var(--navy);
+  --color-navy-foreground: var(--navy-foreground);
+  --color-navy-muted: var(--navy-muted);
+  --color-navy-surface: var(--navy-surface);
+  --color-navy-ring: var(--navy-ring);
+  --color-electric: var(--electric);
+  --color-electric-foreground: var(--electric-foreground);
+  --color-electric-muted: var(--electric-muted);
+  --color-cloud: var(--cloud);
+  --color-slate: var(--slate);
+  --color-slate-foreground: var(--slate-foreground);
+  --color-cloudie-panel: var(--cloudie-panel);
+  --color-cloudie-panel-foreground: var(--cloudie-panel-foreground);
+  --color-cloudie-border: var(--cloudie-border);
+  --color-cloudie-ring: var(--cloudie-ring);
+  --color-cloudie-muted: var(--cloudie-muted);
+  --color-cloudie-muted-foreground: var(--cloudie-muted-foreground);
+  --color-cloudie-chart-1: var(--cloudie-chart-1);
+  --color-cloudie-chart-2: var(--cloudie-chart-2);
+  --color-cloudie-chart-3: var(--cloudie-chart-3);
+  --color-cloudie-chart-4: var(--cloudie-chart-4);
+  --color-cloudie-chart-5: var(--cloudie-chart-5);
+
   /* Motion: one place to tune every transition in the product. */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -170,6 +194,30 @@
   --vtu-brand-glo: #2f8b40;
   --vtu-brand-9mobile: #10b981;
 
+  /* Cloudie fintech chrome — daylight: warm paper, navy panels, electric ink. */
+  --navy: #0b1f3a;
+  --navy-foreground: #f6f6f4;
+  --navy-muted: #9fb0c6;
+  --navy-surface: #ffffff;
+  --navy-ring: #2a5d9a;
+  --electric: #0a5cd6;
+  --electric-foreground: #ffffff;
+  --electric-muted: #7c9ceb;
+  --cloud: #ffffff;
+  --slate: #5b5b64;
+  --slate-foreground: #121215;
+  --cloudie-panel: #ffffff;
+  --cloudie-panel-foreground: #121215;
+  --cloudie-border: #e3e6ec;
+  --cloudie-ring: #0a5cd6;
+  --cloudie-muted: #f1f3f8;
+  --cloudie-muted-foreground: #5b5b64;
+  --cloudie-chart-1: #0a5cd6;
+  --cloudie-chart-2: #10b981;
+  --cloudie-chart-3: #7c9ceb;
+  --cloudie-chart-4: #f59e0b;
+  --cloudie-chart-5: #ef4444;
+
   /* Aliases older surfaces still read. */
   --nb-bg: var(--background);
   --nb-surface: var(--card);
@@ -258,6 +306,30 @@
   --vtu-brand-airtel: #d62828;
   --vtu-brand-glo: #2f8b40;
   --vtu-brand-9mobile: #10b981;
+
+  /* Cloudie fintech chrome — dark: black page, navy panels, electric ink. */
+  --navy: #06122a;
+  --navy-foreground: #f6f6f4;
+  --navy-muted: #7c9ceb;
+  --navy-surface: #0c1b36;
+  --navy-ring: #3b7bd6;
+  --electric: #3b82f6;
+  --electric-foreground: #06122a;
+  --electric-muted: #9fc0ff;
+  --cloud: #0c1b36;
+  --slate: #a1a1aa;
+  --slate-foreground: #f6f6f4;
+  --cloudie-panel: #111827;
+  --cloudie-panel-foreground: #f6f6f4;
+  --cloudie-border: #1f2a44;
+  --cloudie-ring: #3b82f6;
+  --cloudie-muted: #131c30;
+  --cloudie-muted-foreground: #9aa4bf;
+  --cloudie-chart-1: #3b82f6;
+  --cloudie-chart-2: #10b981;
+  --cloudie-chart-3: #9fc0ff;
+  --cloudie-chart-4: #f59e0b;
+  --cloudie-chart-5: #ef4444;
 
   /* Aliases older surfaces still read. */
   --nb-bg: var(--background);
@@ -725,6 +797,325 @@
     border-color: var(--ring);
     outline: none;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 15%, transparent);
+  }
+
+  /* ── Cloudie chrome primitives ──────────────────────────────────────
+     Shared by the admin command center, tenant portal, and auth surfaces.
+     Semantic-only: they never change what a component does. */
+
+  /* Dashboard header: title row with an optional right-aligned action line. */
+  .cloudie-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cloudie-page-header .cloudie-page-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2.2vw, 2.15rem);
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .cloudie-page-header .cloudie-page-sub {
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .cloudie-page-header .cloudie-page-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  /* KPI strip: the four-up metric row under the header. */
+  .cloudie-kpi-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .cloudie-kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .cloudie-kpi-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .cloudie-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1rem 1.1rem;
+    border-radius: 1rem;
+    background: var(--cloudie-panel);
+    border: 1px solid var(--cloudie-border);
+    box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.04);
+    transition:
+      transform var(--duration-base) var(--ease-out-quint),
+      box-shadow var(--duration-base) var(--ease-out-quint),
+      border-color var(--duration-base) var(--ease-out-quint);
+  }
+
+  .cloudie-kpi:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--electric) 30%, var(--cloudie-border));
+    box-shadow: 0 12px 28px -24px hsl(var(--shadow-color) / 0.4);
+  }
+
+  .cloudie-kpi-label {
+    color: var(--cloudie-muted-foreground);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .cloudie-kpi-value {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--cloudie-panel-foreground);
+  }
+
+  .cloudie-kpi-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--cloudie-muted-foreground);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .cloudie-kpi-chart {
+    margin-top: 0.15rem;
+    height: 3.1rem;
+    opacity: 0.9;
+  }
+
+  /* Data table shell. */
+  .cloudie-table-card {
+    border-radius: 1rem;
+    border: 1px solid var(--cloudie-border);
+    background: var(--cloudie-panel);
+    box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.04);
+    overflow: hidden;
+  }
+
+  .cloudie-table-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--cloudie-border);
+    background: color-mix(in srgb, var(--cloudie-panel) 96%, var(--cloudie-muted));
+  }
+
+  .cloudie-table-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--cloudie-panel-foreground);
+  }
+
+  .cloudie-table-sub {
+    color: var(--cloudie-muted-foreground);
+    font-size: 0.82rem;
+  }
+
+  .cloudie-table-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .cloudie-table-scroll {
+    overflow-x: auto;
+  }
+
+  .cloudie-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .cloudie-table th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    color: var(--cloudie-muted-foreground);
+    font-weight: 600;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--cloudie-panel) 94%, var(--cloudie-muted));
+    border-bottom: 1px solid var(--cloudie-border);
+    white-space: nowrap;
+  }
+
+  .cloudie-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--cloudie-border) 60%, transparent);
+    color: var(--cloudie-panel-foreground);
+    vertical-align: middle;
+  }
+
+  .cloudie-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .cloudie-table tbody tr {
+    transition: background-color var(--duration-fast) var(--ease-out-quint);
+  }
+
+  .cloudie-table tbody tr:hover {
+    background: color-mix(in srgb, var(--electric) 6%, var(--cloudie-panel));
+  }
+
+  /* Status pill for tables and lists. */
+  .cloudie-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .cloudie-badge-success {
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 28%, transparent);
+  }
+
+  .cloudie-badge-warning {
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
+    color: var(--warning);
+    border: 1px solid color-mix(in srgb, var(--warning) 28%, transparent);
+  }
+
+  .cloudie-badge-error {
+    background: color-mix(in srgb, var(--error) 12%, transparent);
+    color: var(--error);
+    border: 1px solid color-mix(in srgb, var(--error) 28%, transparent);
+  }
+
+  .cloudie-badge-info {
+    background: color-mix(in srgb, var(--info) 12%, transparent);
+    color: var(--info);
+    border: 1px solid color-mix(in srgb, var(--info) 28%, transparent);
+  }
+
+  .cloudie-badge-muted {
+    background: var(--cloudie-muted);
+    color: var(--cloudie-muted-foreground);
+    border: 1px solid var(--cloudie-border);
+  }
+
+  /* Empty state. */
+  .cloudie-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+
+  .cloudie-empty-icon {
+    color: var(--cloudie-border);
+    opacity: 0.8;
+  }
+
+  .cloudie-empty-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cloudie-panel-foreground);
+  }
+
+  .cloudie-empty-desc {
+    color: var(--cloudie-muted-foreground);
+    font-size: 0.85rem;
+    max-width: 32rem;
+    text-align: center;
+  }
+
+  /* Skeleton row. */
+  .cloudie-skeleton-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cloudie-skeleton {
+    height: 1.1rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(
+      90deg,
+      var(--cloudie-muted) 0%,
+      color-mix(in srgb, var(--cloudie-muted) 82%, var(--cloudie-panel)) 60%,
+      var(--cloudie-muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: cloudie-pulse 1.6s ease-in-out infinite;
+  }
+
+  .cloudie-skeleton-short {
+    width: 40%;
+  }
+
+  .cloudie-skeleton-medium {
+    width: 65%;
+  }
+
+  .cloudie-skeleton-wide {
+    width: 100%;
+  }
+
+  .cloudie-skeleton-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 639px) {
+    .cloudie-table-bar {
+      margin-left: 0;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    .cloudie-table-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .cloudie-table-tabs::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   /* Consistent mobile rhythm across long pages. */

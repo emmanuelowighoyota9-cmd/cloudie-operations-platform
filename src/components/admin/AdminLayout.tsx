@@ -266,12 +266,12 @@ function AdminShell() {
             collapsed ? "justify-center px-2" : "gap-2.5 px-3",
           )}
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-navy text-navy-foreground shadow-sm">
             <ShieldCheck className="size-4" />
           </span>
           {!collapsed && (
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-bold leading-tight tracking-tight">
+              <span className="block truncate text-[13px] font-bold leading-tight tracking-tight text-foreground">
                 Command Center
               </span>
               <span className="block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -429,7 +429,7 @@ function AdminShell() {
                 <ShieldCheck className="size-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-bold leading-tight">
+                <span className="block truncate text-[13px] font-bold leading-tight text-foreground">
                   Command Center
                 </span>
                 <span className="block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">

@@ -1,6 +1,22 @@
 import { Link } from "react-router";
 import { TenantPortalShell, money, usePortal } from "@/components/tenant/TenantPortalShell";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, BadgeCheck, Clock, ShieldCheck, Wallet } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BadgeCheck,
+  Clock,
+  ShieldCheck,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  AlertCircle,
+  Check,
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { type ReactNode, useMemo } from "react";
 
 export default function PortalDashboard() {
   return (

@@ -25,12 +25,16 @@ export function AdminPageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <div className="cloudie-page-header">
       <div className="min-w-0">
-        <h1 className="page-title text-foreground">{title}</h1>
-        {description && <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>}
+        <h1 className="cloudie-page-title">{title}</h1>
+        {description && (
+          <p className="cloudie-page-sub">{description}</p>
+        )}
       </div>
-      {actions && <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">{actions}</div>}
+      {actions && (
+        <div className="cloudie-page-toolbar">{actions}</div>
+      )}
     </div>
   );
 }
@@ -38,17 +42,16 @@ export function AdminPageHeader({
 /**
  * Stat tile tones.
  *
- * Every tile is a tinted emerald/status chip on the card surface — the icon
- * colour reinforces the label, it never carries the meaning on its own. The old
- * version paired a `bg-*-50` light tint with a `dark:` override, which is how a
- * panel ends up with pale blue squares on a black page.
+ * Icon tint reinforces the label; it never carries the meaning on its own.
+ * The palette is the Cloudie navy/electric fintech set so the whole command
+ * center reads as one product instead of four unrelated pages.
  */
 const STAT_COLORS = {
   blue: "bg-info/12 text-info",
-  green: "bg-primary/12 text-primary",
+  green: "bg-success/12 text-success",
   amber: "bg-warning/12 text-warning",
   red: "bg-error/12 text-error",
-  purple: "bg-surface-2 text-foreground",
+  purple: "bg-cloudie-muted text-cloudie-muted-foreground",
   indigo: "bg-info/12 text-info",
 } as const;
 
@@ -66,31 +69,20 @@ export function StatCard({
   hint?: string;
 }) {
   return (
-    <Card className="interactive-card h-full border-border">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              {title}
-            </p>
-            {value === undefined ? (
-              <div
-                className="mt-2 h-7 w-16 animate-pulse rounded bg-surface-2"
-                aria-hidden
-              />
-            ) : (
-              <p className="mt-1 truncate text-2xl font-bold tracking-tight text-foreground">
-                {typeof value === "number" ? value.toLocaleString() : value}
-              </p>
-            )}
-            {hint && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{hint}</p>}
-          </div>
-          <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${STAT_COLORS[color]}`}>
-            <Icon className="size-4" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="cloudie-kpi">
+      <span className="cloudie-kpi-label">{title}</span>
+      {value === undefined ? (
+        <span className="cloudie-skeleton cloudie-skeleton-short" aria-hidden />
+      ) : (
+        <span className="cloudie-kpi-value">
+          {typeof value === "number" ? value.toLocaleString() : value}
+        </span>
+      )}
+      {hint && <span className="cloudie-kpi-delta">{hint}</span>}
+      <div className="mt-1.5 flex size-8 shrink-0 items-center justify-center rounded-lg sm:mt-2" style={{ color: "var(--cloudie-chart-1)" }}>
+        <Icon className="size-4" />
+      </div>
+    </div>
   );
 }
 
@@ -103,11 +95,11 @@ export function StatCard({
  * shouting.
  */
 const TONE = {
-  settled: "border-success/30 bg-success/12 text-success",
-  progress: "border-warning/30 bg-warning/12 text-warning",
-  blocked: "border-error/30 bg-error/12 text-error",
-  moving: "border-info/30 bg-info/12 text-info",
-  inert: "border-border bg-surface-2 text-muted-foreground",
+  settled: "cloudie-badge-success",
+  progress: "cloudie-badge-warning",
+  blocked: "cloudie-badge-error",
+  moving: "cloudie-badge-info",
+  inert: "cloudie-badge-muted",
 } as const;
 
 const BADGE_STYLES: Record<string, string> = {
@@ -161,7 +153,7 @@ const BADGE_STYLES: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   const style = BADGE_STYLES[status] ?? TONE.inert;
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${style}`}>
+    <span className={`cloudie-badge ${style}`}>
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -277,19 +269,19 @@ export function ConfirmDialog({
 
 export function AdminEmpty({ message, hint }: { message: string; hint?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 py-12 text-center dark:border-slate-700">
-      <Inbox className="h-8 w-8 text-slate-300 dark:text-slate-600" />
-      <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{message}</p>
-      {hint && <p className="text-xs text-slate-400">{hint}</p>}
+    <div className="cloudie-empty">
+      <Inbox className="cloudie-empty-icon h-8 w-8" />
+      <p className="cloudie-empty-title">{message}</p>
+      {hint && <p className="cloudie-empty-desc">{hint}</p>}
     </div>
   );
 }
 
 export function AdminSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="space-y-2">
+    <div className="cloudie-skeleton-stack">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-14 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+        <span key={i} className="cloudie-skeleton cloudie-skeleton-wide" />
       ))}
     </div>
   );

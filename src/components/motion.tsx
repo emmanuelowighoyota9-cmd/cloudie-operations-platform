@@ -1,5 +1,131 @@
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import type { ReactNode } from "react";
+import type { ReactNode, SVGProps } from "react";
+import { cn } from "@/lib/utils";
+
+/**
+ * Tiny, dependency-free sparkline.
+ *
+ * A single polyline with a soft area fill, both driven by `currentColor` so the
+ * parent controls the tint. Empty or single-point data render as a flat baseline
+ * instead of collapsing.
+ */
+export function Sparkline({
+  data,
+  className,
+  width = 76,
+  height = 28,
+  padding = 3,
+}: {
+  data: readonly number[];
+  className?: string;
+  width?: number;
+  height?: number;
+  padding?: number;
+}) {
+  const values =
+    data.length >= 2 ? data : data.length === 1 ? [data[0], data[0]] : [0, 0];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const x = (i: number) =>
+    padding + (i * (width - padding * 2)) / (values.length - 1);
+  const y = (v: number) =>
+    height - padding - ((v - min) / span) * (height - padding * 2);
+  const points = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const lastX = x(values.length - 1);
+  const lastY = y(values[values.length - 1]);
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={cn("h-full w-full", className)}
+      preserveAspectRatio="none"
+      aria-hidden
+      focusable="false"
+    >
+      <polygon
+        points={`${padding},${height - padding} ${points} ${width - padding},${height - padding}`}
+        fill="currentColor"
+        fillOpacity={0.12}
+      />
+      <polyline
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle cx={lastX} cy={lastY} r={1.9} fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * Mini sparkline grid for KPI cards.
+ *
+ * Three short series buckets so a stat card can show trend shape without
+ * reaching for a charting library. Tint is inherited from `color` so the card
+ * stays in control of the palette.
+ */
+export function SparklineGrid({
+  data,
+  className,
+  color,
+}: {
+  data: readonly number[];
+  className?: string;
+  color?: string;
+}) {
+  const reduced = useReducedMotion();
+  const series = d3BucketSeries(data);
+  const rows = series.map((bucket, i) => {
+    const bucketData: readonly number[] = bucket;
+    return (
+      <Sparkline
+        key={i}
+        data={bucketData}
+        width={44}
+        height={18}
+        padding={3}
+        className={cn(
+          "h-full w-full",
+          reduced ? "opacity-60" : "opacity-90",
+          i === series.length - 1 && "color-[var(--cloudie-chart-1)]",
+        )}
+      />
+    );
+  });
+  if (reduced) {
+    return (
+      <div className={className} style={{ color }}>
+        {rows}
+      </div>
+    );
+  }
+  return (
+    <div className={cn("flex items-end gap-1.5", className)} style={{ color }}>
+      {rows}
+    </div>
+  );
+}
+
+function d3BucketSeries(data: readonly number[]): readonly number[][] {
+  if (data.length < 2) {
+    const single: readonly number[] = data;
+    return [single];
+  }
+  const sorted = [...data].sort((a, b) => a - b);
+  const count = sorted.length;
+  const bucketCount = Math.min(3, count);
+  const buckets: number[][] = Array.from({ length: bucketCount }, () => []);
+  for (let i = 0; i < count; i += 1) {
+    buckets[i % bucketCount].push(sorted[i]);
+  }
+  const out: readonly number[][] = buckets.filter((b) => b.length > 0) as readonly number[][];
+  return out;
+}
 
 /**
  * Shared motion primitives.

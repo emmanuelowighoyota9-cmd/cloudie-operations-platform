@@ -1,230 +1,1284 @@
+import { user } from "dockerode";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
+import { motion } from "@/components/motion";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import Image from "next/image";
 import { api } from "@/convex/_generated/api";
-import { AdminPageHeader, StatCard, AdminSkeleton } from "@/components/admin/shared";
+import { useAuth } from "@/convex/auth/react";
+
 import {
-  Activity, AlertTriangle, ArrowRight, BadgeDollarSign, Boxes, Building2,
-  LockKeyhole, Server, Shield, WalletCards, Workflow, CircleCheck, CircleAlert, Eye,
-  ClipboardCheck, Coins, CreditCard, FileText, Gavel, Package, Settings,
-  ShieldAlert, ShieldCheck, ShoppingCart, Truck, UserCheck, UserX, Users, Zap
+  Users as UsersIcon,
+  CreditCard as CreditCardIcon,
+  Globe,
+  Zap,
+  BarChart2 as BarChartIcon,
+  FileText,
+  Settings,
+  Activity,
+  TrendingUp,
+  Shield,
+  HelpCircle,
+  ArrowRight,
+  ExternalLink,
+  Loader2,
+  CheckCircle,
+  Circle,
+  Clock,
+  AlertCircle,
+  Filter,
+  Table,
+  Download,
+  ChevronRight,
 } from "lucide-react";
-import { Link } from "react-router";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export default function Admin() {
-  const data = useQuery(api.adminApi.adminDashboard);
-  const risk = useQuery(api.adminApi.getFinancialRisk, { hours: 24, limit: 5 });
-  const ngnValue = (amountNgn: number) => `₦${Math.round(amountNgn).toLocaleString("en-NG")}`;
+  const router = useRouter();
+  const { data: session } = useAuth();
+  const [showAdmins, setShowAdmins] = useState(true);
+  const [filters, setFilters] = useState({
+    search: "",
+    role: "all",
+    team: "all",
+    createdAt: "all",
+  });
+  const [expandedAdmin, setExpandedAdmin] = useState<string | null>(null);
+  const [sort, setSort] = useState<"status" | "name" | "createdAt" | "lastSeen">("status");
+  const admins = useQuery(api.admin.listAdmins, {
+    sort,
+    role: filters.role === "all" ? undefined : filters.role,
+    team: filters.team === "all" ? undefined : filters.team,
+    search: filters.search || undefined,
+  });
+  const lastSync = useQuery(api.admin.getSettings, { field: "lastSync" });
 
-  if (data === undefined) return <div className="space-y-6"><AdminPageHeader title="Cloudie Command Center" description="Loading live platform controls…" /><AdminSkeleton rows={5} /></div>;
+  const workflows = useQuery(api.admin.getWorkflows, { status: "published" });
+  const drafts = useQuery(api.admin.getWorkflows, { status: "draft" });
 
-  if (data === null) return (
-    <div className="space-y-6">
-      <AdminPageHeader title="Cloudie Command Center" description="Privileged platform control." />
-      <Card><CardContent className="flex items-center gap-4 p-6"><ShieldAlert className="h-6 w-6 text-destructive" /><div><h2 className="font-semibold">Admin access required</h2><p className="text-sm text-muted-foreground">Use an active administrator account.</p></div><Link className="ml-auto" to="/dashboard"><Button variant="outline">Back to app</Button></Link></CardContent></Card>
-    </div>
+  const values = useQuery(api.admin.getFeatureFlags);
+  const newsLetter = useQuery(api.admin.getNewsletter);
+  const changelog = useQuery(api.admin.getChangelog);
+  const tickets = useQuery(api.admin.getTickets);
+  const organizations = useQuery(api.admin.listOrganizations);
+  const plans = useQuery(api.admin.getPlans);
+  const stats = useQuery(api.admin.getStats);
+  const teams = useQuery(api.admin.getTeams);
+  const product = useQuery(api.admin.getProduct);
+
+  const [showFilters, setShowFilters] = useState(false);
+
+  const handleOrganizationRoleChange = async (adminId: string, role: "admin" | "member") => {
+    await api.admin.updateOrganizationRole.mutate({ adminId, role });
+  };
+
+  const organizationUsers = useQuery(api.admin.getOrganizationUsers, {
+    organization: filters.team === "all" ? undefined : filters.team,
+  });
+
+  const ticketsByType = useMemo(() => {
+    const map = { open: [], pending: [], resolved: [], closed: [] };
+    (tickets ?? []).forEach((t) => map[t.status]?.push(t));
+    return map;
+  }, [tickets]);
+
+  const pendingCount = ticketsByType.pending.length;
+  const recentTickets = (tickets ?? []).slice(0, 6);
+
+  const recentActivity = useQuery(
+    api.admin.getRecentActivity,
+    lastSync ? { since: lastSync } : {},
   );
 
-  const metrics = [
-    { label: "Users", value: data.users.total, sub: `${data.users.active.toLocaleString()} active`, to: "/admin/users" },
-    { label: "Wallet credits", value: ngnValue(data.points.minted), sub: `${data.points.velocity24h.toLocaleString()} events / 24h`, to: "/admin/transactions" },
-    { label: "Marketplace orders", value: data.marketplace.orders, sub: `${data.marketplace.escrowPending.toLocaleString()} in escrow`, to: "/admin/orders" },
-    { label: "Active shipments", value: data.shipments.active, sub: `${data.shipments.delivered.toLocaleString()} delivered`, to: "/admin/shipments" },
-  ];
+  const ticketsByType display label map {
+    open: "Open",
+    pending: "Pending",
+    resolved: "Resolved",
+    closed: "Closed",
+  };
 
-  const actions = [
-    { label: "Administrators", description: "Privileged access and operators", to: "/admin/administrators", icon: ShieldCheck },
-    { label: "Wallet & Ledger", description: "Credits, debits and reconciliation", to: "/admin/transactions", icon: BadgeDollarSign },
-    { label: "System Health", description: "Infrastructure and provider status", to: "/admin/system-health", icon: Activity },
-    { label: "Platform Settings", description: "Global configuration and controls", to: "/admin/settings", icon: Settings },
-    { label: "VTU Providers", description: "Provider routing and catalog", to: "/admin/vtu/providers", icon: Zap },
-    { label: "Business Tenants", description: "Tenant lifecycle and controls", to: "/admin/tenants", icon: Building2 },
-  ];
+  return (<div className="page-content">
+    <Suspense fallback={<AdminLoading />}>
+      <AdminDash
+        organizationUsers={organizationUsers ?? []}
+        workflows={workflows ?? []}
+        drafts={drafts ?? []}
+        values={values ?? {}}
+        newsLetter={newsLetter ?? {}}
+        changelogEntries={changelog ?? []}
+        ticketsByStatus={ticketsByType}
+        recentTickets={recentTickets}
+        recentActivity={recentActivity ?? []}
+        organizations={organizations ?? []}
+        plans={plans ?? []}
+        stats={stats ?? {}}
+        teams={teams ?? []}
+        showAdmins={showAdmins}
+        setShowAdmins={setShowAdmins}
+        filters={filters}
+        setFilters={setFilters}
+        showFilters={showFilters}
+        setShowFilters={setShowFilters}
+        expandedAdmin={expandedAdmin}
+        setExpandedAdmin={setExpandedAdmin}
+        sort={sort}
+        setSort={setSort}
+        admins={admins ?? []}
+        handleOrganizationRoleChange={handleOrganizationRoleChange}
+        product={product ?? {}}
+        pendingCount={pendingCount}
+      />
+    </Suspense>
+  </div>);
+}
 
-  const attention = [
-    { label: "Pending KYC", value: data.kyc.pending, to: "/admin/kyc", danger: false },
-    { label: "Open disputes", value: data.disputes.open, to: "/admin/disputes", danger: true },
-    { label: "Pending vendors", value: data.vendors.pending, to: "/admin/vendors", danger: false },
-    { label: "Locked tenants", value: data.tenants.locked, to: "/admin/tenants", danger: true },
-  ];
+function AdminLoading() {
+  return null;
+}
 
-  const groups = [
-    { title: "Users", items: [
-      { title: "Total Users", value: data.users.total, icon: Users, color: "blue" as const, to: "/admin/users" },
-      { title: "Active Users", value: data.users.active, icon: UserCheck, color: "green" as const, to: "/admin/users" },
-      { title: "Suspended", value: data.users.suspended, icon: UserX, color: "red" as const, to: "/admin/users" },
-    ]},
-    { title: "Wallet Economy", items: [
-      { title: "Wallet Credits", value: data.points.minted, icon: Coins, color: "blue" as const, to: "/admin/transactions", hint: ngnValue(data.points.minted) },
-      { title: "Wallet Debits", value: data.points.burned, icon: Coins, color: "amber" as const, to: "/admin/transactions", hint: ngnValue(data.points.burned) },
-      { title: "Velocity (24h)", value: data.points.velocity24h, icon: Zap, color: "purple" as const, to: "/admin/transactions" },
-    ]},
-    { title: "Marketplace", items: [
-      { title: "Vendors", value: data.vendors.total, icon: Boxes, color: "purple" as const, to: "/admin/vendors" },
-      { title: "Orders", value: data.marketplace.orders, icon: ShoppingCart, color: "blue" as const, to: "/admin/orders" },
-      { title: "Escrow Pending", value: data.marketplace.escrowPending, icon: Package, color: "amber" as const, to: "/admin/orders" },
-      { title: "Open Disputes", value: data.disputes.open, icon: Gavel, color: "red" as const, to: "/admin/disputes" },
-    ]},
-    { title: "Operations", items: [
-      { title: "Active Shipments", value: data.shipments.active, icon: Truck, color: "blue" as const, to: "/admin/shipments" },
-      { title: "Delivered", value: data.shipments.delivered, icon: Truck, color: "green" as const, to: "/admin/shipments" },
-      { title: "Documents (24h)", value: data.documents.last24h, icon: FileText, color: "indigo" as const, to: "/admin/documents" },
-      { title: "Pending KYC", value: data.kyc.pending, icon: ClipboardCheck, color: "amber" as const, to: "/admin/kyc" },
-    ]},
-  ];
+function AdminDash({
+  organizationUsers,
+  workflows,
+  drafts,
+  values,
+  newsLetter,
+  changelogEntries,
+  ticketsByStatus,
+  recentTickets,
+  recentActivity,
+  organizations,
+  plans,
+  stats,
+  teams,
+  showAdmins,
+  setShowAdmins,
+  filters,
+  setFilters,
+  showFilters,
+  setShowFilters,
+  expandedAdmin,
+  setExpandedAdmin,
+  sort,
+  setSort,
+  admins,
+  handleOrganizationRoleChange,
+  product,
+  pendingCount,
+}: {
+  organizationUsers: OrganizationUser[];
+  workflows: Workflow[];
+  drafts: Workflow[];
+  values: Record<string, boolean>;
+  newsLetter: { enabled: boolean; lastSent: string | null };
+  changelogEntries: ChangelogEntry[];
+  ticketsByStatus: Record<string, Ticket[]>;
+  recentTickets: Ticket[];
+  recentActivity: RecentActivityItem[];
+  organizations: Organization[];
+  plans: Plan[];
+  stats: DashboardStats;
+  teams: Team[];
+  showAdmins: boolean;
+  setShowAdmins: (v: boolean) => void;
+  filters: FilterState;
+  setFilters: (f: FilterState) => void;
+  showFilters: boolean;
+  setShowFilters: (v: boolean) => void;
+  expandedAdmin: string | null;
+  setExpandedAdmin: (id: string | null) => void;
+  sort: string;
+  setSort: (v: string) => void;
+  admins: AdminUser[];
+  handleOrganizationRoleChange: (adminId: string, role: "admin" | "member") => void;
+  product: Product;
+  pendingCount: number;
+}) {
+  const title = product?.name ?? "Cloudie";
+  const totalUsers = stats?.users ?? 0;
+  const totalRevenue = stats?.monthlyRevenue ?? 0;
+  const activeTeams = stats?.activeTeams ?? 0;
+  const totalPosts = stats?.posts ?? 0;
+  const totalTickets = stats?.tickets ?? 0;
+
+  const anyOrgStats =
+    (organizations ?? []).length > 0 ||
+    (organizationUsers ?? []).length > 0 ||
+    stats?.avgTeamMembers != null ||
+    stats?.teamsWithUsers != null;
+
+  const totalOrders = stats?.orders ?? 0;
+  const totalRevenueDisplay = totalRevenue.toLocaleString(undefined, { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+
+  const recentActivityList = [...(recentActivity ?? [])].slice(0, 6);
+  const emptyActivity = recentActivityList.length === 0;
+
+  const topOrganizationUsers = useMemo(
+    () =>
+      [...(organizationUsers ?? [])]
+        .sort((a, b) => b.lastActiveAt - a.lastActiveAt)
+        .slice(0, 5),
+    [organizationUsers],
+  );
+
+  const activeFilters = useMemo(() => {
+    const list: string[] = [];
+    if (filters.search) list.push("Search: " + filters.search);
+    if (filters.role !== "all") list.push(roleLabel(filters.role));
+    if (filters.team !== "all") list.push("Team: " + teamLabel(filters.team));
+    if (filters.createdAt !== "all") list.push("Created: " + filters.createdAt);
+    return list;
+  }, [filters]);
 
   return (
-    <div className="space-y-7 sm:space-y-9">
-      <section className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.12] via-card to-card p-5 shadow-sm sm:p-7">
-        <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <Badge className="border-0 bg-primary text-primary-foreground">MASTER SUPER ADMIN</Badge>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> LIVE CONTROL PLANE</span>
+    <>
+      <div className="page">
+        <PageHeader
+          title="Super Admin"
+          description={`Manage ${title}'s users, teams, organizations, billing, support, and launch flow.`}
+          action={<a href="/admin/settings" className="link-subtle">Go to Settings <span style={{ display: "inline-flex" }}><ArrowRight size={14} /></span></a>}
+        />
+
+        <div className="page-content dashboard">
+          <div className="dashboard-grid">
+            <StatCard
+              label="Total users"
+              value={totalUsers}
+              sub="All time"
+              icon={<UsersIcon />}
+              iconColor="var(--color-brand)"
+            />
+            <StatCard
+              label="Revenue"
+              value={totalRevenueDisplay}
+              sub="MRR"
+              icon={<CreditCardIcon />}
+              iconColor="var(--color-accent)"
+            />
+            <StatCard
+              label="Active teams"
+              value={activeTeams}
+              sub={`${totalPosts} posts total`}
+              icon={<Zap />}
+              iconColor="var(--color-success)"
+            />
+            <StatCard
+              label="Avg team members"
+              value={stats?.avgTeamMembers ?? 0}
+              sub={`${stats?.teamsWithUsers ?? 0} teams with users`}
+              icon={<Activity />}
+              iconColor="var(--color-muted)"
+            />
+          </div>
+
+          <div className="dashboard-grid">
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Recent activity</h3>
+                  <p className="dashboard-card-subtitle">Across the platform</p>
+                </div>
+                <div className="empty-state">
+                  {emptyActivity ? (
+                    <span className="text-muted">No activity yet</span>
+                  ) : (
+                    <span className="text-muted">{recentActivityList.length} events</span>
+                  )}
+                </div>
+              </div>
+              <div className="dashboard-card-content">
+                {emptyActivity ? (
+                  <div className="activity-empty">
+                    <Clock size={18} />
+                    <span>Nothing has happened yet — launch something to see activity.</span>
+                  </div>
+                ) : (
+                  <ul className="activity-list">
+                    <AdminActivityList items={recentActivityList} />
+                  </ul>
+                )}
+              </div>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Cloudie Command Center</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">One control surface for users, money movement, marketplace operations, tenants, VTU infrastructure and privileged access.</p>
+
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Support</h3>
+                  <p className="dashboard-card-subtitle">Help desk overview</p>
+                </div>
+                <div className="badge status pending">{pendingCount} pending</div>
+              </div>
+              <div className="dashboard-card-content">
+                <div className="support-overview">
+                  <div className="support-summary">
+                    <div className="support-stat">
+                      <span className="support-stat-value">{ticketsByStatus.open.length}</span>
+                      <span className="support-stat-label">Open</span>
+                    </div>
+                    <div className="support-stat">
+                      <span className="support-stat-value">{ticketsByStatus.pending.length}</span>
+                      <span className="support-stat-label">Pending</span>
+                    </div>
+                    <div className="support-stat">
+                      <span className="support-stat-value">{ticketsByStatus.resolved.length}</span>
+                      <span className="support-stat-label">Resolved</span>
+                    </div>
+                    <div className="support-stat">
+                      <span className="support-stat-value">{ticketsByStatus.closed.length}</span>
+                      <span className="support-stat-label">Closed</span>
+                    </div>
+                  </div>
+                  <div className="support-tickets">
+                    <div className="support-table">
+                      <div className="support-table-row support-table-header">
+                        <span className="support-table-cell">Subject</span>
+                        <span className="support-table-cell support-table-cell--secondary">Status</span>
+                        <span className="support-table-cell support-table-cell--secondary">Created</span>
+                      </div>
+                      {recentTickets.map((ticket) => (
+                        <div className="support-table-row" key={ticket.id}>
+                          <span className="support-table-cell">
+                            <span className="truncate">{ticket.subject}</span>
+                          </span>
+                          <span className="support-table-cell support-table-cell--secondary">
+                            <StatusBadge status={ticket.status} />
+                          </span>
+                          <span className="support-table-cell support-table-cell--secondary">
+                            {formatDate(ticket.createdAt)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {recentTickets.length === 0 && (
+                      <div className="support-empty">
+                        <span>No tickets yet</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {recentTickets.length > 0 && (
+                  <div className="support-link">
+                    <Link to="/admin/tickets" className="link-subtle">
+                      View all tickets <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex">
-            <Link to="/admin/administrators"><Button variant="outline" className="w-full gap-2"><ShieldCheck className="h-4 w-4" /> Admins</Button></Link>
-            <Link to="/admin/system-health"><Button className="w-full gap-2"><Activity className="h-4 w-4" /> Health</Button></Link>
+
+          <div className="dashboard-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Organizations</h3>
+                  <p className="dashboard-card-subtitle">{organizations.length} organizations</p>
+                </div>
+                <Link to="/admin/organizations" className="link-subtle">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="dashboard-card-content">
+                {organizations.length === 0 ? (
+                  <div className="activity-empty">
+                    <Globe size={18} />
+                    <span>No organizations yet</span>
+                  </div>
+                ) : (
+                  <div className="organizations-list">
+                    {(organizations ?? []).slice(0, 6).map((org) => (
+                      <div className="organization-row" key={org.id}>
+                        <div className="organization-name">{org.name}</div>
+                        <div className="organization-meta">
+                          <span>{org.usersCount ?? 0} users</span>
+                          <span>·</span>
+                          <span>{org.teamsCount ?? 0} teams</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Featured plans</h3>
+                  <p className="dashboard-card-subtitle">Managed from settings</p>
+                </div>
+                <Link to="/admin/billing/plans" className="link-subtle">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="dashboard-card-content">
+                {plans.length === 0 ? (
+                  <div className="activity-empty">
+                    <CreditCardIcon size={18} />
+                    <span>No plans configured</span>
+                  </div>
+                ) : (
+                  <div className="plans-list">
+                    {(plans ?? []).slice(0, 3).map((plan) => (
+                      <PlanRow key={plan.id} plan={plan} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-grid">
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Workflows</h3>
+                  <p className="dashboard-card-subtitle">
+                    {workflows.length} published · {drafts.length} drafts
+                  </p>
+                </div>
+                <Link to="/admin/workflows" className="link-subtle">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="dashboard-card-content workflow-list">
+                {workflows.length === 0 && drafts.length === 0 ? (
+                  <div className="activity-empty">
+                    <Zap size={18} />
+                    <span>No workflows yet</span>
+                  </div>
+                ) : (
+                  <ul className="workflow-items">
+                    {(workflows ?? []).concat(drafts ?? []).map((item) => (
+                      <li key={item.id} className="workflow-item">
+                        <Zap size={14} className="workflow-icon" />
+                        <div className="workflow-meta">
+                          <span className="workflow-name">{item.name}</span>
+                          <span className="workflow-sub">{item.actionType}</span>
+                        </div>
+                        <span className="workflow-status">
+                          {item.status === "published" ? (
+                            <span className="badge status live">Live</span>
+                          ) : (
+                            <span className="badge status draft">Draft</span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Feature flags</h3>
+                  <p className="dashboard-card-subtitle">Product toggles</p>
+                </div>
+                <Link to="/admin/settings/feature-flags" className="link-subtle">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="dashboard-card-content">
+                {Object.keys(values).length === 0 ? (
+                  <div className="activity-empty">
+                    <ToggleSwitch size={18} />
+                    <span>No feature flags configured</span>
+                  </div>
+                ) : (
+                  <ul className="flag-list">
+                    {Object.entries(values).map(([key, enabled]) => (
+                      <li key={key} className="flag-row">
+                        <span className="flag-key">{key}</span>
+                        <ToggleSwitch
+                          enabled={enabled}
+                          onChange={() => {
+                            // handled by settings page
+                          }}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-grid">
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Changelog</h3>
+                  <p className="dashboard-card-subtitle">
+                    Product updates and notes
+                  </p>
+                </div>
+                <Link to="/admin/changelog" className="link-subtle">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="dashboard-card-content">
+                {changelogEntries.length === 0 ? (
+                  <div className="activity-empty">
+                    <FileText size={18} />
+                    <span>No changelog entries yet</span>
+                  </div>
+                ) : (
+                  <ul className="changelog-list">
+                    {changelogEntries.slice(0, 5).map((entry) => (
+                      <ChangelogRow key={entry.id} entry={entry} />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="dashboard-card-section-header">
+                <div>
+                  <h3 className="dashboard-card-title">Newsletter</h3>
+                  <p className="dashboard-card-subtitle">
+                    {newsLetter.enabled ? "Enabled" : "Disabled"}
+                    {newsLetter.lastSent ? ` · last sent ${formatDate(newsLetter.lastSent)}` : ""}
+                  </p>
+                </div>
+                <Link to="/admin/settings/newsletter" className="link-subtle">
+                  Manage <ArrowRight size={14} />
+                </Link>
+              </div>
+              <div className="dashboard-card-content">
+                <div className="newsletter-panel">
+                  <div className="newsletter-status">
+                    <span className="newsletter-label">Newsletter</span>
+                    <span className={newsLetter.enabled ? "badge status live" : "badge status disabled"}>
+                      {newsLetter.enabled ? "Active" : "Off"}
+                    </span>
+                  </div>
+                  {newsLetter.lastSent && (
+                    <div className="newsletter-meta">
+                      <span className="newsletter-meta-label">Last sent</span>
+                      <span className="newsletter-meta-value">{formatDate(newsLetter.lastSent)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-card wide">
+            <div className="dashboard-card-section-header">
+              <div>
+                <h3 className="dashboard-card-title">
+                  {showAdmins ? "Admins" : "Organization members"}
+                  {anyOrgStats ? "" : ""}
+                </h3>
+                <p className="dashboard-card-subtitle">
+                  {showAdmins
+                    ? "Platform administrators and teams"
+                    : "Members across organizations"}
+                </p>
+              </div>
+              <div className="dashboard-card-header-actions">
+                <button
+                  type="button"
+                  className={`chip ${showAdmins ? "chip-selected" : ""}`}
+                  onClick={() => {
+                    setShowAdmins(true);
+                    setFilters((p) => ({ ...p, role: "all", team: "all" }));
+                  }}
+                >
+                  Admins
+                </button>
+                <button
+                  type="button"
+                  className={`chip ${!showAdmins ? "chip-selected" : ""}`}
+                  onClick={() => {
+                    setShowAdmins(false);
+                    setFilters((p) => ({ ...p, role: "all", team: "all" }));
+                  }}
+                >
+                  Organizations
+                </button>
+                <div className="dashboard-card-header-right">
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => setShowFilters(!showFilters)}
+                    aria-label="Toggle filters"
+                  >
+                    <Filter size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {showFilters && (
+              <div className="dashboard-card-filters">
+                <div className="filters-row">
+                  <Input
+                    type="text"
+                    label="Search"
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    placeholder="Name, email, or team..."
+                  />
+                  <Select
+                    label="Role"
+                    value={filters.role}
+                    options={[
+                      { value: "all", label: "All roles" },
+                      { value: "owner", label: "Owner" },
+                      { value: "admin", label: "Admin" },
+                      { value: "member", label: "Member" },
+                    ]}
+                    onChange={(v) => setFilters({ ...filters, role: v })}
+                  />
+                  <Select
+                    label="Team"
+                    value={filters.team}
+                    options={[
+                      { value: "all", label: "All teams" },
+                      ...((teams ?? []).map((t) => ({ value: t.id, label: t.name })) as any),
+                    ]}
+                    onChange={(v) => setFilters({ ...filters, team: v })}
+                  />
+                  <Select
+                    label="Created"
+                    value={filters.createdAt}
+                    options={[
+                      { value: "all", label: "Any time" },
+                      { value: "today", label: "Today" },
+                      { value: "week", label: "This week" },
+                      { value: "month", label: "This month" },
+                      { value: "year", label: "This year" },
+                    ]}
+                    onChange={(v) => setFilters({ ...filters, createdAt: v })}
+                  />
+                  {(filters.search || filters.role !== "all" || filters.team !== "all" || filters.createdAt !== "all") && (
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() =>
+                        setFilters({ search: "", role: "all", team: "all", createdAt: "all" })
+                      }
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="dashboard-card-content">
+              {activeFilters.length > 0 && (
+                <div className="active-filters">
+                  {activeFilters.map((f, i) => (
+                    <span key={i} className="filter-tag">
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {showAdmins ? (
+                <AdminsTable
+                  admins={admins}
+                  expandedAdmin={expandedAdmin}
+                  setExpandedAdmin={setExpandedAdmin}
+                  sort={sort}
+                  setSort={setSort}
+                  handleOrganizationRoleChange={handleOrganizationRoleChange}
+                />
+              ) : (
+                <OrganizationMembersTable
+                  organizationUsers={organizationUsers}
+                  teams={teams}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="dashboard-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+            <div className="dashboard-card nav-card">
+              <div className="dashboard-card-section-header">
+                <h3 className="dashboard-card-title">Platform</h3>
+              </div>
+              <div className="nav-list">
+                <NavLink href="/admin">Overview</NavLink>
+                <NavLink href="/admin/tenants">Tenants</NavLink>
+                <NavLink href="/admin/banking">Banking</NavLink>
+                <NavLink href="/admin/teams">Teams</NavLink>
+                <NavLink href="/admin/organizations">Organizations</NavLink>
+              </div>
+            </div>
+
+            <div className="dashboard-card nav-card">
+              <div className="dashboard-card-section-header">
+                <h3 className="dashboard-card-title">Support</h3>
+              </div>
+              <div className="nav-list">
+                <NavLink href="/admin/tickets">Tickets</NavLink>
+                <NavLink href="/admin/billing">Billing</NavLink>
+                <NavLink href="/admin/billing/events">Billing events</NavLink>
+                <NavLink href="/admin/billing/invoices">Invoices</NavLink>
+                <NavLink href="/admin/billing/usage">Usage</NavLink>
+              </div>
+            </div>
+
+            <div className="dashboard-card nav-card">
+              <div className="dashboard-card-section-header">
+                <h3 className="dashboard-card-title">Settings</h3>
+              </div>
+              <div className="nav-list">
+                <NavLink href="/admin/settings/profile">Profile</NavLink>
+                <NavLink href="/admin/settings/notifications">Notifications</NavLink>
+                <NavLink href="/admin/settings/billing">Billing</NavLink>
+                <NavLink href="/admin/settings/team">Team</NavLink>
+                <NavLink href="/admin/settings/i18n">Localization</NavLink>
+                <NavLink href="/admin/settings/secrets">Secrets</NavLink>
+                <NavLink href="/admin/settings/customers">Customers</NavLink>
+                <NavLink href="/admin/settings/integrations">Integrations</NavLink>
+                <NavLink href="/admin/settings/branding">Branding</NavLink>
+                <NavLink href="/admin/settings/metrics">Metrics</NavLink>
+                <NavLink href="/admin/settings/feature-flags">Feature flags</NavLink>
+                <NavLink href="/admin/settings/newsletter">Newsletter</NavLink>
+              </div>
+            </div>
+
+            <div className="dashboard-card nav-card">
+              <div className="dashboard-card-section-header">
+                <h3 className="dashboard-card-title">Launch</h3>
+              </div>
+              <div className="nav-list">
+                <NavLink href="/admin/launch/payments">Payments</NavLink>
+                <NavLink href="/admin/launch/team">Team</NavLink>
+                <NavLink href="/admin/launch/customers">Customers</NavLink>
+                <NavLink href="/admin/launch/launch">Review and launch</NavLink>
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-card wide">
+            <div className="dashboard-card-section-header">
+              <div>
+                <h3 className="dashboard-card-title">Help & resources</h3>
+                <p className="dashboard-card-subtitle">Support center, orientation, and billing docs</p>
+              </div>
+            </div>
+            <div className="dashboard-card-content">
+              <div className="help-grid">
+                <div className="help-section">
+                  <h4 className="help-section-title">Support center</h4>
+                  <ul className="help-links">
+                    <li><Link to="/help">Help home</Link></li>
+                    <li><Link to="/help/zendesk">Zendesk console</Link></li>
+                    <li><Link to="/help/orientation">Orientation</Link></li>
+                    <li><Link to="/help/billing">Billing help</Link></li>
+                  </ul>
+                </div>
+                <div className="help-section">
+                  <h4 className="help-section-title">Orientation</h4>
+                  <ul className="help-links">
+                    <li><Link to="/help/orientation/getting-started">Getting started</Link></li>
+                    <li><Link to="/help/orientation/quickstart">Quickstart</Link></li>
+                    <li><Link to="/help/orientation/integrations">Integrations</Link></li>
+                  </ul>
+                </div>
+                <div className="help-section">
+                  <h4 className="help-section-title">Billing docs</h4>
+                  <ul className="help-links">
+                    <li><Link to="/help/billing/plans">Plans</Link></li>
+                    <li><Link to="/help/billing/usage">Usage</Link></li>
+                    <li><Link to="/help/billing/invoices/123">Invoice example</Link></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-card wide">
+            <div className="dashboard-card-section-header">
+              <div>
+                <h3 className="dashboard-card-title">Tenant portal examples</h3>
+                <p className="dashboard-card-subtitle">White-label tenant experiences published on the platform</p>
+              </div>
+              <Link to="/admin/tenants" className="link-subtle">
+                Manage tenants <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className="dashboard-card-content">
+              <div className="tenant-preview-grid">
+                {tenantPortalPreviews.map((preview) => (
+                  <a key={preview.href} href={preview.href} target="_blank" rel="noreferrer" className="tenant-preview-card">
+                    <div className="tenant-preview-thumb">
+                      {preview.thumb ? (
+                        <Image
+                          src={preview.thumb}
+                          alt={preview.name}
+                          width={280}
+                          height={158}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div className="tenant-preview-placeholder">
+                          <Globe size={28} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="tenant-preview-meta">
+                      <span className="tenant-preview-name">{preview.name}</span>
+                      <span className="tenant-preview-href">{preview.href}</span>
+                    </div>
+                    <div className="tenant-preview-action">
+                      <ExternalLink size={12} />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    </>
+  );
+}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Link to="/admin/transactions" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Wallet control</span><WalletCards className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">{ngnValue(data.points.minted)}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Credits processed</p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-full rounded-full bg-primary" /></div>
-        </Link>
-        <Link to="/admin/orders" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Order control</span><Workflow className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">{data.marketplace.orders.toLocaleString()}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{data.marketplace.escrowPending.toLocaleString()} awaiting escrow resolution</p>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600"><CircleCheck className="h-3.5 w-3.5" /> LIVE ORDER QUEUE</div>
-        </Link>
-        <Link to="/admin/system-health" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Platform signals</span><Server className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">LIVE</p>
-          <p className="mt-1 text-xs text-muted-foreground">{data.documents.last24h.toLocaleString()} documents processed in 24h</p>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600"><CircleCheck className="h-3.5 w-3.5" /> DATA LAYER RESPONDING</div>
-        </Link>
-        <Link to="/admin/audit" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Security control</span><LockKeyhole className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">{data.users.suspended.toLocaleString()}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Suspended accounts under control</p>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-primary"><Eye className="h-3.5 w-3.5" /> AUDIT READY</div>
-        </Link>
-      </section>
+function ChangelogRow({ entry }: { entry: ChangelogEntry }) {
+  return (
+    <li className="changelog-row">
+      <div className="changelog-dot" />
+      <div className="changelog-meta">
+        <span className="changelog-date">{formatDate(entry.date)}</span>
+        <span className="changelog-summary">{entry.summary}</span>
+      </div>
+    </li>
+  );
+}
 
-      <section className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /><h2 className="font-semibold">Master control room</h2></div><p className="mt-1 text-xs text-muted-foreground">Prioritized signals for the administrator responsible for the whole platform.</p></div>
-          <Link to="/admin/audit" className="text-xs font-semibold text-primary hover:underline">Open audit trail →</Link>
-        </div>
-        <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <Link to="/admin/kyc" className="p-5 transition hover:bg-muted/40"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Identity queue</span><CircleAlert className={data.kyc.pending > 0 ? "h-4 w-4 text-amber-500" : "h-4 w-4 text-emerald-500"} /></div><p className="mt-3 text-xl font-bold">{data.kyc.pending.toLocaleString()}</p><p className="text-xs text-muted-foreground">KYC reviews pending</p></Link>
-          <Link to="/admin/disputes" className="p-5 transition hover:bg-muted/40"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Risk queue</span><CircleAlert className={data.disputes.open > 0 ? "h-4 w-4 text-red-500" : "h-4 w-4 text-emerald-500"} /></div><p className="mt-3 text-xl font-bold">{data.disputes.open.toLocaleString()}</p><p className="text-xs text-muted-foreground">Open marketplace disputes</p></Link>
-          <Link to="/admin/tenants" className="p-5 transition hover:bg-muted/40"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Tenant controls</span><CircleAlert className={data.tenants.locked > 0 ? "h-4 w-4 text-red-500" : "h-4 w-4 text-emerald-500"} /></div><p className="mt-3 text-xl font-bold">{data.tenants.locked.toLocaleString()}</p><p className="text-xs text-muted-foreground">Locked business tenants</p></Link>
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Link to="/admin/transactions" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Wallet control</span><WalletCards className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">{ngnValue(data.points.minted)}</p><p className="mt-1 text-xs text-muted-foreground">Credits processed</p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full w-full rounded-full bg-primary" /></div>
-        </Link>
-        <Link to="/admin/orders" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Order control</span><Workflow className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">{data.marketplace.orders.toLocaleString()}</p><p className="mt-1 text-xs text-muted-foreground">{data.marketplace.escrowPending.toLocaleString()} awaiting escrow resolution</p>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600"><CircleCheck className="h-3.5 w-3.5" /> LIVE ORDER QUEUE</div>
-        </Link>
-        <Link to="/admin/system-health" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Platform signals</span><Server className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">LIVE</p><p className="mt-1 text-xs text-muted-foreground">{data.documents.last24h.toLocaleString()} documents processed in 24h</p>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600"><CircleCheck className="h-3.5 w-3.5" /> DATA LAYER RESPONDING</div>
-        </Link>
-        <Link to="/admin/audit" className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-          <div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Security control</span><LockKeyhole className="h-4 w-4 text-primary" /></div>
-          <p className="mt-3 text-2xl font-bold tracking-tight">{data.users.suspended.toLocaleString()}</p><p className="mt-1 text-xs text-muted-foreground">Suspended accounts under control</p>
-          <div className="mt-3 flex items-center gap-1.5 text-[10px] font-semibold text-primary"><Eye className="h-3.5 w-3.5" /> AUDIT READY</div>
-        </Link>
-      </section>
-
-      <section className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /><h2 className="font-semibold">Master control room</h2></div><p className="mt-1 text-xs text-muted-foreground">Prioritized signals for the administrator responsible for the whole platform.</p></div>
-          <Link to="/admin/audit" className="text-xs font-semibold text-primary hover:underline">Open audit trail →</Link>
-        </div>
-        <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <Link to="/admin/kyc" className="p-5 transition hover:bg-muted/40"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Identity queue</span><CircleAlert className={data.kyc.pending > 0 ? "h-4 w-4 text-amber-500" : "h-4 w-4 text-emerald-500"} /></div><p className="mt-3 text-xl font-bold">{data.kyc.pending.toLocaleString()}</p><p className="text-xs text-muted-foreground">KYC reviews pending</p></Link>
-          <Link to="/admin/disputes" className="p-5 transition hover:bg-muted/40"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Risk queue</span><CircleAlert className={data.disputes.open > 0 ? "h-4 w-4 text-red-500" : "h-4 w-4 text-emerald-500"} /></div><p className="mt-3 text-xl font-bold">{data.disputes.open.toLocaleString()}</p><p className="text-xs text-muted-foreground">Open marketplace disputes</p></Link>
-          <Link to="/admin/tenants" className="p-5 transition hover:bg-muted/40"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">Tenant controls</span><CircleAlert className={data.tenants.locked > 0 ? "h-4 w-4 text-red-500" : "h-4 w-4 text-emerald-500"} /></div><p className="mt-3 text-xl font-bold">{data.tenants.locked.toLocaleString()}</p><p className="text-xs text-muted-foreground">Locked business tenants</p></Link>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div><div className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-primary" /><h2 className="font-semibold">Financial risk engine</h2></div><p className="mt-1 text-xs text-muted-foreground">Explainable, advisory monitoring of recent wallet movement. No funds are automatically frozen.</p></div>
-          <Link to="/admin/transactions" className="text-xs font-semibold text-primary hover:underline">Open monitor →</Link>
-        </div>
-        {risk === undefined ? <div className="h-24 animate-pulse rounded-2xl bg-muted" /> : risk.alerts.length === 0 ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm"><span className="font-semibold text-emerald-600">No elevated wallet risk detected.</span><span className="ml-2 text-muted-foreground">{risk.scannedTransactions.toLocaleString()} transactions scanned.</span></div> : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{risk.alerts.map((a) => <Link key={a.userId} to="/admin/transactions" className="rounded-2xl border border-border p-4 transition hover:border-primary/30 hover:bg-muted/30"><div className="flex items-center justify-between gap-2"><span className="font-mono text-[10px] text-muted-foreground">{a.userId.slice(-12)}</span><Badge variant={a.severity === "critical" ? "destructive" : "outline"}>{a.severity.toUpperCase()} · {a.score}</Badge></div><p className="mt-3 text-sm font-semibold">₦{Math.round(a.debitTotal).toLocaleString("en-NG")} debited</p><p className="mt-1 text-xs text-muted-foreground">{a.transactionCount} transactions · largest ₦{Math.round(a.largestDebit).toLocaleString("en-NG")}</p><p className="mt-2 text-xs">{a.reasons[0]}</p></Link>)}</div>}
-      </section>
-
-      <section className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div className="mb-5 flex flex-col gap-1"><div className="flex items-center gap-2"><WalletCards className="h-4 w-4 text-primary" /><h2 className="font-semibold">Finance & risk command center</h2></div><p className="text-xs text-muted-foreground">Live financial movement and risk queues requiring privileged review.</p></div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            ["Credits · 24h", ngnValue(data.points.minted), data.points.mintedCount24h.toLocaleString()+" credit events", "/admin/transactions"],
-            ["Debits · 24h", ngnValue(data.points.debited24h), data.points.debitedCount24h.toLocaleString()+" debit events", "/admin/transactions"],
-            ["Net movement · 24h", ngnValue(data.points.velocity24h), data.points.velocity24h >= 0 ? "Net positive" : "Net negative", "/admin/transactions"],
-            ["Risk queues", (data.disputes.open + data.kyc.pending + data.tenants.locked).toLocaleString(), "disputes + KYC + locked tenants", "/admin/audit"],
-          ].map(([label,value,sub,to]) => <Link key={label} to={to} className="rounded-2xl border border-border p-4 transition hover:border-primary/30 hover:bg-primary/[0.03]"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p><p className="mt-2 text-xl font-bold tracking-tight">{value}</p><p className="mt-1 text-[11px] text-muted-foreground">{sub}</p></Link>)}
-        </div>
-      </section>
-
-      <AdminPageHeader title="Platform overview" description="Live metrics from the current production data layer." />
-
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((m) => <Link key={m.label} to={m.to} className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{m.label}</p><p className="mt-2 text-2xl font-bold tracking-tight text-foreground">{typeof m.value === "number" ? m.value.toLocaleString() : m.value}</p><p className="mt-1 text-xs text-muted-foreground">{m.sub}</p></Link>)}
-      </section>
-
-      <section className="grid gap-5 lg:grid-cols-2">
-        <Card className="rounded-2xl border-border shadow-sm"><CardContent className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between"><div><h2 className="font-semibold">Wallet activity</h2><p className="text-xs text-muted-foreground">Ledger activity tracked in the current production data layer.</p></div><Link to="/admin/transactions" className="text-xs font-semibold text-primary">View ledger</Link></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-border p-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Ledger events · 7d</p><p className="mt-2 text-2xl font-bold">{data.activity.ledger7d.toLocaleString()}</p></div>
-            <div className="rounded-xl border border-border p-4"><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Net movement · 24h</p><p className="mt-2 text-2xl font-bold">{ngnValue(data.points.velocity24h)}</p></div>
-          </div>
-        </CardContent></Card>
-        <Card className="rounded-2xl border-border shadow-sm"><CardContent className="p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between"><div><h2 className="font-semibold">Admin activity</h2><p className="text-xs text-muted-foreground">Use the audit trail for privileged actions.</p></div><Link to="/admin/audit" className="text-xs font-semibold text-primary">Audit trail</Link></div>
-          <div className="rounded-xl border border-border p-5"><p className="text-sm text-muted-foreground">Audit events are available in the dedicated audit workspace.</p><p className="mt-2 text-2xl font-bold">{data.users.admins.toLocaleString()} administrators</p></div>
-        </CardContent></Card>
-      </section>
-
-      <section className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
-        <Card className="rounded-2xl border-border shadow-sm"><CardContent className="p-5 sm:p-6">
-          <div className="mb-4"><h2 className="font-semibold">Operations pulse</h2><p className="mt-1 text-xs text-muted-foreground">Current workload and recent platform movement.</p></div>
-          <div className="space-y-3">
-            {[["New users · 7d", data.activity.newUsers7d.toLocaleString(), "/admin/users"], ["Ledger events · 7d", data.activity.ledger7d.toLocaleString(), "/admin/transactions"]].map(([label,value,to]) => <Link key={label} to={to} className="flex items-center justify-between rounded-xl border border-border px-4 py-3 hover:bg-muted/50"><span className="text-sm">{label}</span><span className="font-bold">{value}</span></Link>)}
-          </div>
-        </CardContent></Card>
-        <Card className="rounded-2xl border-border shadow-sm"><CardContent className="p-5 sm:p-6">
-          <h2 className="font-semibold">Administrator coverage</h2><p className="mt-1 text-xs text-muted-foreground">Active admin accounts available for privileged operations.</p>
-          <p className="mt-5 text-3xl font-bold">{data.users.admins.toLocaleString()}</p>
-          <Link to="/admin/administrators" className="mt-3 inline-block text-xs font-semibold text-primary">Manage administrators →</Link>
-        </CardContent></Card>
-      </section>
-
-
-
-      {groups.map((group) => <section key={group.title} className="space-y-3"><h2 className="section-label">{group.title}</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{group.items.map((m) => <Link key={m.title} to={m.to}><StatCard title={m.title} value={m.value} icon={m.icon} color={m.color} hint={"hint" in m ? m.hint : undefined} /></Link>)}</div></section>)}
+function PlanRow({ plan }: { plan: Plan }) {
+  const isCurrentPlan = true;
+  return (
+    <div className="plan-row">
+      <div className="plan-name">
+        <span className="plan-badge">{plan.name}</span>
+        {isCurrentPlan && <span className="plan-current">Current</span>}
+      </div>
+      <div className="plan-meta">
+        <span>{plan.formattedPrice}</span>
+        <span>·</span>
+        <span>{plan.interval}</span>
+      </div>
     </div>
   );
+}
+
+function AdminActivityList({ items }: { items: RecentActivityItem[] }) {
+  return items.map((item, i) => (
+    <li key={i} className="activity-row">
+      <Avatar name={item.actorName} size={28} />
+      <div className="activity-content">
+        <div>
+          <span className="activity-text">
+            <strong>{item.actorName}</strong>
+            {" "}
+            {item.actionLabel}
+          </span>
+          <div className="activity-time">{item.timeLabel}</div>
+        </div>
+        {item.target ? (
+          <Link to={item.target} className="activity-target">
+            <ArrowRight size={12} />
+            {item.targetLabel}
+          </Link>
+        ) : null}
+      </div>
+    </li>
+  ));
+}
+
+function OrganizationMembersTable({
+  organizationUsers,
+  teams,
+}: {
+  organizationUsers: OrganizationUser[];
+  teams: Team[];
+}) {
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  return (
+    <div className="members-table-wrap">
+      <div className="members-table">
+        <div className="members-table-header">
+          <span className="members-table-cell">Name</span>
+          <span className="members-table-cell">Email</span>
+          <span className="members-table-cell">Organization</span>
+          <span className="members-table-cell">Team</span>
+          <span className="members-table-cell">Last active</span>
+          <span className="members-table-cell">Status</span>
+        </div>
+        {topOrganizationUsers.length === 0 ? (
+          <div className="members-empty">
+            <UsersIcon size={16} />
+            <span>No members across organizations</span>
+          </div>
+        ) : (
+          topOrganizationUsers.map((user) => (
+            <div key={user.id} className="members-table-row" onClick={() => setExpandedRow(expandedRow === user.id ? null : user.id)}>
+              <div className="members-table-cell members-cell-primary">
+                <Avatar name={user.name} size={24} />
+                <div className="members-cell-info">
+                  <span className="members-cell-name">{user.name}</span>
+                  <span className="members-cell-sub">{user.role}</span>
+                </div>
+              </div>
+              <div className="members-table-cell">{user.email}</div>
+              <div className="members-table-cell">{user.organizationName}</div>
+              <div className="members-table-cell">
+                <Select
+                  value={user.teamId ?? "none"}
+                  options={[
+                    { value: "none", label: "—" },
+                    ...((teams ?? []).map((t) => ({ value: t.id, label: t.name })) as any),
+                  ]}
+                  onChange={() => {}}
+                  className="inline-select"
+                />
+              </div>
+              <div className="members-table-cell">{user.lastSeen ?? "—"}</div>
+              <div className="members-table-cell">
+                <StatusBadge status={user.status} />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      {expandedRow && (
+        <div className="members-expanded">
+          <div className="expanded-header">
+            <button type="button" className="link-subtle" onClick={() => setExpandedRow(null)}>
+              <ArrowRight size={14} style={{ transform: "rotate(180deg)" }} />
+              Hide details
+            </button>
+          </div>
+          <div className="expanded-content">
+            <AdminOrgMemberRow user={topOrganizationUsers.find((u) => u.id === expandedRow)!} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminOrgMemberRow({ user }: { user: OrganizationUser }) {
+  return (
+    <div className="org-member-row">
+      <div className="org-member-header">
+        <Avatar name={user.name} size={32} />
+        <div>
+          <div className="org-member-name">{user.name}</div>
+          <div className="org-member-email">{user.email}</div>
+        </div>
+        <div className="org-member-actions">
+          <StatusBadge status={user.status} />
+          <button type="button" className="link-subtle">Edit</button>
+        </div>
+      </div>
+      <dl className="org-member-details">
+        <div>
+          <dt>Name</dt>
+          <dd>{user.name}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{user.email}</dd>
+        </div>
+        <div>
+          <dt>Organization</dt>
+          <dd>{user.organizationName}</dd>
+        </div>
+        <div>
+          <dt>Team</dt>
+          <dd>{user.teamName ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Role</dt>
+          <dd>{user.role}</dd>
+        </div>
+        <div>
+          <dt>Last active</dt>
+          <dd>{user.lastActiveAt != null ? formatDate(user.lastActiveAt) : "—"}</dd>
+        </div>
+        <div>
+          <dt>Joined</dt>
+          <dd>{formatDate(user.createdAt)}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function AdminsTable({
+  admins,
+  expandedAdmin,
+  setExpandedAdmin,
+  sort,
+  setSort,
+  handleOrganizationRoleChange,
+}: {
+  admins: AdminUser[];
+  expandedAdmin: string | null;
+  setExpandedAdmin: (id: string | null) => void;
+  sort: string;
+  setSort: (v: string) => void;
+  handleOrganizationRoleChange: (adminId: string, role: "admin" | "member") => void;
+}) {
+  const sorted = useMemo(() => {
+    const list = [...admins];
+    if (sort === "status") {
+      list.sort((a, b) => {
+        const rank = (s: string) => (s === "active" ? 0 : s === "pending" ? 1 : 2);
+        return rank(a.status) - rank(b.status);
+      });
+    } else if (sort === "name") {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === "createdAt") {
+      list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    } else if (sort === "lastSeen") {
+      list.sort((a, b) => (b.lastSeenAt ?? 0) - (a.lastSeenAt ?? 0));
+    }
+    return list;
+  }, [admins, sort]);
+
+  return (
+    <div className="admins-table-wrap">
+      <div className="admins-table">
+        <div className="admins-table-header">
+          <span className="admins-table-cell">
+            Admin
+            <ArrowRight size={12} style={{ transform: "rotate(0deg)", marginLeft: 4 }} />
+          </span>
+          <span className="admins-table-cell">Role</span>
+          <span className="admins-table-cell">Organization</span>
+          <span className="admins-table-cell">Created</span>
+          <span className="admins-table-cell">Last seen</span>
+          <span className="admins-table-cell">Status</span>
+          <span className="admins-table-cell">Actions</span>
+        </div>
+        {sorted.length === 0 ? (
+          <div className="admins-empty">
+            <UsersIcon size={16} />
+            <span>No admins found</span>
+          </div>
+        ) : (
+          sorted.map((admin) => (
+            <div key={admin.id} className="admins-table-row">
+              <div className="admins-table-cell admins-cell-primary">
+                <Avatar name={admin.name} size={24} />
+                <div>
+                  <div className="admin-cell-name">{admin.name}</div>
+                  <div className="admin-cell-email">{admin.email}</div>
+                </div>
+              </div>
+              <div className="admins-table-cell">
+                <RoleSelect
+                  role={admin.role}
+                  onChange={(role) => handleOrganizationRoleChange(admin.id, role)}
+                />
+              </div>
+              <div className="admins-table-cell">{admin.organizationName ?? "—"}</div>
+              <div className="admins-table-cell">{formatDate(admin.createdAt)}</div>
+              <div className="admins-table-cell">
+                {admin.lastSeenAt ? formatDate(admin.lastSeenAt) : "—"}
+              </div>
+              <div className="admins-table-cell">
+                <StatusBadge status={admin.status} />
+              </div>
+              <div className="admins-table-cell">
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => setExpandedAdmin(expandedAdmin === admin.id ? null : admin.id)}
+                  aria-label="Details"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      {expandedAdmin && (
+        <div className="expanded-row">
+          {(() => {
+            const admin = admins.find((a) => a.id === expandedAdmin);
+            if (!admin) return null;
+            return (
+              <AdminAdminRow
+                admin={admin}
+                onRoleChange={(role) => handleOrganizationRoleChange(admin.id, role)}
+              />
+            );
+          })()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminAdminRow({
+  admin,
+  onRoleChange,
+}: {
+  admin: AdminUser;
+  onRoleChange: (role: "admin" | "member") => void;
+}) {
+  return (
+    <div className="admin-expanded">
+      <div className="admin-expanded-header">
+        <Avatar name={admin.name} size={36} />
+        <div>
+          <div className="admin-expanded-name">{admin.name}</div>
+          <div className="admin-expanded-email">{admin.email}</div>
+        </div>
+        <StatusBadge status={admin.status} />
+      </div>
+      <dl className="admin-expanded-details">
+        <div>
+          <dt>ID</dt>
+          <dd>{admin.id}</dd>
+        </div>
+        <div>
+          <dt>Name</dt>
+          <dd>{admin.name}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{admin.email}</dd>
+        </div>
+        <div>
+          <dt>Role</dt>
+          <dd>
+            <select
+              value={admin.role}
+              onChange={(e) => onRoleChange(e.target.value as "admin" | "member")}
+              className="select-sm"
+            >
+              <option value="admin">Admin</option>
+              <option value="member">Member</option>
+            </select>
+          </dd>
+        </div>
+        <div>
+          <dt>Organization</dt>
+          <dd>{admin.organizationName ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Created</dt>
+          <dd>{formatDate(admin.createdAt)}</dd>
+        </div>
+        <div>
+          <dt>Last seen</dt>
+          <dd>{admin.lastSeenAt ? formatDate(admin.lastSeenAt) : "—"}</dd>
+        </div>
+        <div>
+          <dt>Locale</dt>
+          <dd>{admin.locale ?? "—"}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function RoleSelect({
+  role,
+  onChange,
+}: {
+  role: "admin" | "member";
+  onChange: (role: "admin" | "member") => void;
+}) {
+  return (
+    <select
+      value={role}
+      onChange={(e) => onChange(e.target.value as "admin" | "member")}
+      className="select-sm"
+    >
+      <option value="admin">Admin</option>
+      <option value="member">Member</option>
+    </select>
+  );
+}
+
+function Avatar({ name, size = 20 }: { name: string; size?: number }) {
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "?";
+  const hue = (name.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) * 9973) % 360;
+  return (
+    <div
+      className="avatar"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: `hsl(${hue}, 55%, 55%)`,
+      }}
+    >
+      <span style={{ color: "#fff", fontSize: size * 0.4, fontWeight: 600, lineHeight: 1 }}>
+        {initials}
+      </span>
+    </div>
+  );
+}
+
+function NavLink({ href }: { href: string }) {
+  return (
+    <a href={href} className="nav-link">
+      {href.replace(/\/admin\/?/, "").replace(/^\//, "") || "Overview"}
+      <ArrowRight size={12} />
+    </a>
+  );
+}
+
+function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      className={`toggle ${enabled ? "toggle-on" : "toggle-off"}`}
+      onClick={onChange}
+    >
+      <span className="toggle-track" />
+    </button>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    active: { label: "Active", className: "badge status active" },
+    pending: { label: "Pending", className: "badge status pending" },
+    suspended: { label: "Suspended", className: "badge status disabled" },
+    onboarded: { label: "Onboarded", className: "badge status active" },
+    invited: { label: "Invited", className: "badge status pending" },
+    requested: { label: "Requested", className: "badge status pending" },
+  };
+  const info = map[status] ?? { label: status, className: "badge status default" };
+  return <span className={info.className}>{info.label}</span>;
+}
+
+function formatDate(date: string | number | null | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "number" ? new Date(date) : new Date(date);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function roleLabel(role: string) {
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function teamLabel(teamId: string) {
+  return "Team " + teamId.slice(0, 4);
 }

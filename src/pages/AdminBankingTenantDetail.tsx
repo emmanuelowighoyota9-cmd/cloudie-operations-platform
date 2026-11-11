@@ -4,14 +4,57 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ShieldCheck, Activity, Users, CreditCard, Lock, Unlock, Pause, FileText, DollarSign, Landmark, Paintbrush, Palette, Check, MonitorSmartphone, LayoutDashboard, Sun, Moon, ExternalLink } from "lucide-react";
+import {
+  type LucideProps,
+  ShieldCheck,
+  Activity,
+  Users,
+  CreditCard,
+  Lock,
+  Unlock,
+  Pause,
+  FileText,
+  DollarSign,
+  Landmark,
+  Paintbrush,
+  Palette,
+  Check,
+  MonitorSmartphone,
+  LayoutDashboard,
+  Sun,
+  Moon,
+  ExternalLink,
+  ArrowRight,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { AdminEmpty, StatusBadge, AdminSkeleton, fmtDate } from "@/components/admin/shared";
+import { cn } from "@/lib/utils";
+import { SparklineGrid } from "@/components/motion";
+import { Settings } from "lucide-react";
 
 function Money({ minor, currency = "USD" }: { minor: number; currency?: string }) {
-  const sym = currency === "USD" ? "$" : currency === "GBP" ? "£" : currency === "EUR" ? "€" : currency + " ";
+  const sym =
+    currency === "USD"
+      ? "$"
+      : currency === "GBP"
+        ? "£"
+        : currency === "EUR"
+          ? "€"
+          : currency + " ";
   return <>{sym}{(minor / 100).toFixed(2)}</>;
 }
-
-function fmtDate(ms?: number) { return ms ? new Date(ms).toLocaleString() : "—"; }
 
 /**
  * Declared at module scope on purpose.
@@ -22,20 +65,31 @@ function fmtDate(ms?: number) { return ms ? new Date(ms).toLocaleString() : "—
  * Hoisted here, the type is stable and the props carry what the closure used
  * to capture.
  */
-function TenantNavItem({ active, onClick, label, icon: Icon }: {
+function TenantNavItem({
+  active,
+  onClick,
+  label,
+  icon: Icon,
+}: {
   active: boolean;
   onClick: () => void;
   label: string;
-  icon: any;
+  icon: React.ComponentType<LucideProps>;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300"}`}
+      className={
+        `inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ` +
+        (active
+          ? "bg-slate-900 text-white"
+          : "text-slate-600 hover:bg-slate-100 dark:text-slate-300")
+      }
     >
-      <Icon className="h-4 w-4" /> {label}
+      <Icon className="h-4 w-4" />
+      {label}
     </button>
   );
 }
@@ -124,226 +178,738 @@ export default function AdminBankingTenantDetail() {
     finally { setBusy(false); setPendingSlug(null); }
   };
 
+  const statusBadge = tenant.isActive ? "active" : "locked";
+
+  const tabItems: Array<{
+    value: typeof tab;
+    label: string;
+    Icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { value: "overview", label: "Overview", Icon: Activity },
+    { value: "customers", label: "Customers & accounts", Icon: Users },
+    { value: "transfers", label: "Transactions", Icon: CreditCard },
+    { value: "design", label: "Design kit", Icon: Palette },
+    { value: "settings", label: "Settings & fees", Icon: Paintbrush },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Landmark className="h-6 w-6 text-slate-900" />
-            <h1 className="text-xl font-bold tracking-tight">{tenant.siteName}</h1>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${tenant.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-              {lifecycle} {currency && <span className="text-slate-400">· {currency}</span>}
+    <div className="space-y-8">
+      <div className="cloudie-page-header">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-navy text-navy-foreground"
+            >
+              <Landmark className="size-4" />
             </span>
+            <h1 className="cloudie-page-title">
+              {tenant.siteName}
+            </h1>
+            <StatusBadge status={statusBadge} />
+            {currency && (
+              <span className="cloudie-badge cloudie-badge-muted">
+                {currency}
+              </span>
+            )}
           </div>
-          <div className="text-sm text-slate-500 mt-1">{(tenant as any).displayName ?? tenant.siteName} · {(tenant as any).subdomain}.g0ki.com · {(tenant as any).country} {(tenant as any).plan ? `· ${ (tenant as any).plan}` : ""}</div>
-          <div className="text-xs text-slate-400 mt-2 flex items-center gap-2"><DollarSign className="h-3 w-3" /> Fee config snapshot is stored per transaction; historical transactions remain explainable after fee changes.</div>
+          <p className="cloudie-page-sub">
+            {(tenant as any).displayName ?? tenant.siteName} ·{" "}
+            {(tenant as any).subdomain}.g0ki.com ·{" "}
+            {(tenant as any).country}
+            {(tenant as any).plan ? ` · ${(tenant as any).plan}` : ""}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <DollarSign className="size-3" />
+            </span>
+            Fee config is snapshotted per transaction; historical transactions
+            remain explainable after fee changes.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link to={`/admin/tenants/${id}/banking/settings`} className="text-xs rounded-full bg-slate-900 text-white px-3 py-1.5 font-semibold">Banking settings</Link>
-          <Link to="/admin/tenants/new" className="text-sm text-slate-500 hover:text-slate-900 underline">New banking tenant</Link>
+
+        <div className="cloudie-page-toolbar">
+          <Link to={`/admin/tenants/${id}/banking/settings`}>
+            <Button variant="outline" className="gap-2">
+              <Settings className="size-4" />
+              Banking settings
+            </Button>
+          </Link>
+          <Link to="/admin/tenants/new">
+            <Button variant="ghost">New banking tenant</Button>
+          </Link>
         </div>
       </div>
 
+      {/* KPI strip */}
+      <div className="cloudie-kpi-grid">
+        <div className="cloudie-kpi">
+          <div className="flex items-center justify-between">
+            <span className="cloudie-kpi-label">Lifecycle</span>
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ color: "var(--cloudie-chart-1)" }}
+            >
+              <ShieldCheck className="size-4" />
+            </span>
+          </div>
+          <span className="cloudie-kpi-value">{lifecycle}</span>
+          <span className="cloudie-kpi-delta">
+            {tenant.isActive ? "Live" : "Restricted"}
+          </span>
+        </div>
+
+        <div className="cloudie-kpi">
+          <div className="flex items-center justify-between">
+            <span className="cloudie-kpi-label">Recent transfers</span>
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ color: "var(--cloudie-chart-3)" }}
+            >
+              <CreditCard className="size-4" />
+            </span>
+          </div>
+          <span className="cloudie-kpi-value">
+            {transferList.length.toLocaleString()}
+          </span>
+          <span className="cloudie-kpi-delta">
+            last 50 records
+          </span>
+        </div>
+
+        <div className="cloudie-kpi">
+          <div className="flex items-center justify-between">
+            <span className="cloudie-kpi-label">Deposits</span>
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ color: "var(--cloudie-chart-2)" }}
+            >
+              <DollarSign className="size-4" />
+            </span>
+          </div>
+          <span className="cloudie-kpi-value">
+            {depositList.length.toLocaleString()}
+          </span>
+          <span className="cloudie-kpi-delta">
+            {depositList.length > 0
+              ? `${depositList.filter((d) => (d as any).status === "completed").length} completed`
+              : "No records"}
+          </span>
+        </div>
+
+        <div className="cloudie-kpi">
+          <div className="flex items-center justify-between">
+            <span className="cloudie-kpi-label">Withdrawals</span>
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ color: "var(--cloudie-chart-5)" }}
+            >
+              <Lock className="size-4" />
+            </span>
+          </div>
+          <span className="cloudie-kpi-value">
+            {withdrawList.length.toLocaleString()}
+          </span>
+          <span className="cloudie-kpi-delta">
+            {withdrawList.length > 0
+              ? `${withdrawList.filter((w) => (w as any).status === "completed").length} completed`
+              : "No records"}
+          </span>
+        </div>
+      </div>
+
+      {/* Tab bar */}
       <div className="flex gap-2 flex-wrap">
-        <TenantNavItem active={tab === "overview"} onClick={() => setTab("overview")} label="Overview" icon={Activity} />
-        <TenantNavItem active={tab === "customers"} onClick={() => setTab("customers")} label="Customers & accounts" icon={Users} />
-        <TenantNavItem active={tab === "transfers"} onClick={() => setTab("transfers")} label="Transactions" icon={CreditCard} />
-        <TenantNavItem active={tab === "design"} onClick={() => setTab("design")} label="Design kit" icon={Palette} />
-        <TenantNavItem active={tab === "settings"} onClick={() => setTab("settings")} label="Settings & fees" icon={Paintbrush} />
+        {tabItems.map((item) => (
+          <TenantNavItem
+            key={item.value}
+            active={tab === item.value}
+            onClick={() => setTab(item.value)}
+            label={item.label}
+            icon={item.Icon}
+          />
+        ))}
       </div>
 
       {tab === "overview" && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
-            <div className="text-sm font-semibold flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Tenant health</div>
-            <div className="grid sm:grid-cols-3 gap-4 text-sm">
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-                <div className="text-xs text-slate-500">Status</div>
-                <div className="font-semibold">{lifecycle} {tenant.isActive ? "✓ active" : "✗ locked"}</div>
-                <div className="text-xs text-slate-500 mt-1">{(tenant as any).lifecycleStatus ? `lifecycleStatus=${lifecycle}` : null} · {(tenant as any).bankingEnabled ? "bankingEnabled" : null}</div>
+        <>
+          <Card className="cloudie-table-card overflow-hidden">
+            <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Tenant health</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Current lifecycle, activity snapshot, and fee configuration.
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-                <div className="text-xs text-slate-500">Recent transfers/deposits/withdrawals</div>
-                <div className="font-mono text-sm mt-1">{transferList.length} / {depositList.length} / {withdrawList.length}</div>
-              </div>
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-                <div className="text-xs text-slate-500">Fee config</div>
-                <div className="text-xs mt-1">{fee ? `${fee.transferFeeMinor}c transfer · ${fee.withdrawalFeeMinor}c withdrawal · perTx ${(fee as any).perTransactionLimitMinor ?? "—"}` : "default (0)"}</div>
-              </div>
-            </div>
-          </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-cloudie-border bg-cloudie-panel p-4">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="mt-1 font-semibold">
+                    {lifecycle}
+                    {tenant.isActive ? " · active" : " · locked"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {(tenant as any).lifecycleStatus ? (
+                      <span className="font-mono">
+                        lifecycleStatus={lifecycle}
+                      </span>
+                    ) : null}
+                    {(tenant as any).bankingEnabled ? (
+                      <span className="ml-2 font-mono">
+                        bankingEnabled
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
 
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-5 space-y-3">
-            <div className="text-sm font-semibold flex items-center gap-2"><Lock className="h-4 w-4" /> Lifecycle controls</div>
-            <div className="text-xs text-slate-600 dark:text-slate-300">When disabled/suspended: transactions are blocked; ledger & audit history are preserved; existing data is never deleted. Restoration is safe. History remains browseable here.</div>
-            <div className="flex flex-wrap gap-2 items-center">
-              <input value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason (required)" className="flex-1 min-w-[180px] rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm dark:bg-slate-900 dark:border-slate-700" />
-              <button disabled={busy} onClick={doLifecycle} className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${lifecycle === "active" ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"} disabled:opacity-50`}>
-                <lc.icon className="h-4 w-4" /> {lifecycle === "active" ? "Suspend tenant" : lifecycle === "suspended" ? "Restore tenant" : `Set ${lc.next}`}
-              </button>
-            </div>
-            <div className="text-xs text-slate-500">Next: {lc.next} — {lc.hint}</div>
-          </div>
-        </div>
+                <div className="rounded-xl border border-cloudie-border bg-cloudie-panel p-4">
+                  <p className="text-xs text-muted-foreground">
+                    Transfers / deposits / withdrawals
+                  </p>
+                  <p className="mt-1 font-mono text-sm">
+                    {transferList.length} / {depositList.length} /
+                    {withdrawList.length}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-cloudie-border bg-cloudie-panel p-4">
+                  <p className="text-xs text-muted-foreground">Fee config</p>
+                  <p className="mt-1 text-xs">
+                    {fee
+                      ? `${fee.transferFeeMinor}c transfer · ${fee.withdrawalFeeMinor}c withdrawal · perTx ${(fee as any).perTransactionLimitMinor ?? "—"}`
+                      : "default (0)"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="cloudie-table-card overflow-hidden">
+            <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Lifecycle controls</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    When disabled or suspended: transactions are blocked, ledger
+                    and audit history are preserved, and existing data is never
+                    deleted. Restoration is safe and history stays browseable
+                    here.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center gap-2">
+                  <Input
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Reason (required)"
+                    className="flex-1"
+                  />
+                  <Button
+                    disabled={busy || !reason.trim()}
+                    variant={lifecycle === "active" ? "destructive" : "default"}
+                    className="gap-2"
+                    onClick={doLifecycle}
+                  >
+                    <lc.icon className="size-4" />
+                    {lifecycle === "active"
+                      ? "Suspend tenant"
+                      : lifecycle === "suspended"
+                        ? "Restore tenant"
+                        : `Set ${lc.next}`}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ArrowRight className="size-3" />
+                  Next: {lc.next} — {lc.hint}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
       {tab === "customers" && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
-            <div className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4" /> Members (first 50)</div>
-            <TenantMembers tenantId={id} />
-          </div>
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
-            <div className="text-sm font-semibold flex items-center gap-2"><FileText className="h-4 w-4" /> KYC (last 50)</div>
-            <TenantKyc tenantId={id} />
-          </div>
+          <Card className="cloudie-table-card overflow-hidden">
+            <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Members</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    First 50 tenant members.
+                  </p>
+                </div>
+                <Users className="size-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <TenantMembers tenantId={id} />
+            </CardContent>
+          </Card>
+
+          <Card className="cloudie-table-card overflow-hidden">
+            <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">KYC</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Most recent 50 KYC submissions.
+                  </p>
+                </div>
+                <FileText className="size-4 text-muted-foreground" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <TenantKyc tenantId={id} />
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {tab === "transfers" && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
-          <div className="text-sm font-semibold flex items-center gap-2"><CreditCard className="h-4 w-4" /> Deposits · Transfers · Withdrawals (last 50)</div>
-          {!hist ? <div className="text-sm text-slate-400 animate-pulse">Loading…</div> : <div className="space-y-6">
-            <div>
-              <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">Transfers</div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {transferList.length === 0 ? <div className="py-6 text-center text-sm text-slate-400">No transfers yet</div> : transferList.map((t: any) => (
-                  <div key={t._id} className="py-3 flex items-center gap-3 text-sm">
-                    <span className="font-mono text-xs rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-1">{t.reference}</span>
-                    <span className={`text-xs rounded-full px-2 py-0.5 ${t.status === "completed" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : t.status === "failed" ? "bg-red-50 text-red-700 border border-red-200" : "bg-slate-100 text-slate-600"}`}>{t.status}</span>
-                    <span className="flex-1"><Money minor={t.amountMinor} currency={t.currency} /> {t.feeMinor ? <span className="text-xs text-slate-400">+ fee <Money minor={t.feeMinor} currency={t.currency} /></span> : null}</span>
-                    <span className="text-xs text-slate-500 hidden sm:block">{fmtDate(t.createdAt)}</span>
+        <Card className="cloudie-table-card overflow-hidden">
+          <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Activity</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Deposits, transfers, and withdrawals — last 50 records.
+                </p>
+              </div>
+              <CreditCard className="size-4 text-muted-foreground" />
+            </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            {!hist ? (
+              <div className="rounded-2xl border border-cloudie-border bg-cloudie-muted/30 p-6">
+                <div className="cloudie-skeleton-stack">
+                  <span className="cloudie-skeleton cloudie-skeleton-wide" />
+                  <span className="cloudie-skeleton cloudie-skeleton-medium" />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Transfers
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {transferList.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-muted-foreground">
+                        No transfers yet
+                      </div>
+                    ) : (
+                      transferList.map((t: any) => (
+                        <div
+                          key={t._id}
+                          className="flex items-center gap-3 py-2.5 border-b border-cloudie-border last:border-0"
+                        >
+                          <span className="font-mono text-xs rounded-full bg-cloudie-muted px-2 py-1">
+                            {t.reference}
+                          </span>
+                          <StatusBadge
+                            status={t.status === "completed"
+                              ? "completed"
+                              : t.status === "failed"
+                                ? "failed"
+                              : "pending"}
+                          />
+                          <span className="flex-1 min-w-0">
+                            <Money
+                              minor={t.amountMinor}
+                              currency={t.currency}
+                            />
+                            {t.feeMinor ? (
+                              <span className="text-xs text-muted-foreground">
+                                " + fee "
+                                <Money
+                                  minor={t.feeMinor}
+                                  currency={t.currency}
+                                />
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="text-xs text-muted-foreground hidden sm:block">
+                            {fmtDate(t.createdAt)}
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-2 gap-6">
-              <div>
-                <div className="text-xs font-semibold">Deposits</div>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                  {depositList.length === 0 ? <div className="py-6 text-center text-slate-400">—</div> : depositList.map((d: any) => (
-                    <div key={d._id} className="py-2 font-mono text-xs flex items-center gap-2"><span>{d.reference}</span><span className={`rounded-full px-2 py-0.5 ${d.status === "completed" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100"}`}>{d.status}</span><span className="ml-auto"><Money minor={d.amountMinor} currency={d.currency} /></span></div>
-                  ))}
+                </div>
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Deposits
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      {depositList.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          —
+                        </div>
+                      ) : (
+                        depositList.map((d: any) => (
+                          <div
+                            key={d._id}
+                            className="flex items-center gap-2 py-2 border-b border-cloudie-border last:border-0 text-sm font-mono"
+                          >
+                            <span>{d.reference}</span>
+                            <StatusBadge
+                              status={d.status === "completed"
+                                ? "completed"
+                                : "pending"}
+                            />
+                            <span className="ml-auto">
+                              <Money
+                                minor={d.amountMinor}
+                                currency={d.currency}
+                              />
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Withdrawals
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      {withdrawList.length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">
+                          —
+                        </div>
+                      ) : (
+                        withdrawList.map((w: any) => (
+                          <div
+                            key={w._id}
+                            className="flex items-center gap-2 py-2 border-b border-cloudie-border last:border-0 text-sm font-mono"
+                          >
+                            <span>{w.reference}</span>
+                            <StatusBadge
+                              status={w.status === "completed"
+                                ? "completed"
+                                : "pending"}
+                            />
+                            <span className="ml-auto">
+                              <Money
+                                minor={w.amountMinor}
+                                currency={w.currency}
+                              />
+                              {w.feeMinor ? (
+                                <>
+                                  " + "
+                                  <Money
+                                    minor={w.feeMinor}
+                                    currency={w.currency}
+                                  />
+                                </>
+                              ) : null}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-xs font-semibold">Withdrawals</div>
-                <div className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                  {withdrawList.length === 0 ? <div className="py-6 text-center text-slate-400">—</div> : withdrawList.map((w: any) => (
-                    <div key={w._id} className="py-2 font-mono text-xs flex items-center gap-2"><span>{w.reference}</span><span className={`rounded-full px-2 py-0.5 ${w.status === "completed" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100"}`}>{w.status}</span><span className="ml-auto"><Money minor={w.amountMinor} currency={w.currency} />{w.feeMinor ? <> + <Money minor={w.feeMinor} currency={w.currency} /></> : null}</span></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {tab === "design" && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold flex items-center gap-2"><Palette className="h-4 w-4 text-sky-500" /> Banking design kit</div>
-                <p className="text-xs text-slate-500 mt-1">
-                  A kit themes both surfaces this tenant gets — the customer banking app and its admin console — and can pull the template's
-                  operating defaults (plan, region, support contacts). Applied changes are audited.
-                </p>
+          <Card className="cloudie-table-card overflow-hidden">
+            <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Palette className="size-4 text-electric" />
+                    Banking design kit
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    A kit themes both surfaces this tenant gets — the customer
+                    banking app and its admin console — and can pull the template’s
+                    operating defaults (plan, region, support contacts).
+                    Applied changes are audited.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/site/${id}/banking`}
+                    className="inline-flex items-center gap-1 text-xs rounded-full border border-cloudie-border px-3 py-1.5 text-muted-foreground hover:bg-cloudie-muted/40"
+                  >
+                    <MonitorSmartphone className="size-3.5" />
+                    Preview customer app
+                  </Link>
+                  <Link
+                    to={`/site/${id}/admin`}
+                    className="inline-flex items-center gap-1 text-xs rounded-full border border-cloudie-border px-3 py-1.5 text-muted-foreground hover:bg-cloudie-muted/40"
+                  >
+                    <LayoutDashboard className="size-3.5" />
+                    Preview console
+                  </Link>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Link to={`/site/${id}/banking`} className="inline-flex items-center gap-1 text-xs rounded-full border border-slate-200 px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                  <MonitorSmartphone className="h-3.5 w-3.5" /> Preview customer app
-                </Link>
-                <Link to={`/site/${id}/admin`} className="inline-flex items-center gap-1 text-xs rounded-full border border-slate-200 px-3 py-1.5 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                  <LayoutDashboard className="h-3.5 w-3.5" /> Preview console
-                </Link>
-              </div>
-            </div>
-            <label className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-              <input type="checkbox" checked={applyDefaults} onChange={e => setApplyDefaults(e.target.checked)} />
-              Also apply the template's operating defaults (plan, country, timezone, support email)
-            </label>
-          </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <label className="inline-flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={applyDefaults}
+                  onChange={(e) => setApplyDefaults(e.target.checked)}
+                />
+                Also apply the template’s operating defaults (plan, country,
+                timezone, support email)
+              </label>
+            </CardContent>
+          </Card>
 
           {templates === undefined ? (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 animate-pulse text-sm text-slate-400">Loading kits…</div>
+            <Card className="cloudie-table-card overflow-hidden">
+              <CardContent className="p-6">
+                <div className="cloudie-skeleton-stack">
+                  <span className="cloudie-skeleton cloudie-skeleton-wide" />
+                  <span className="cloudie-skeleton cloudie-skeleton-medium" />
+                </div>
+              </CardContent>
+            </Card>
           ) : templates.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-sm text-slate-500">
-              No kits loaded yet — install them from <Link to="/admin/tenants/new" className="underline">New banking tenant</Link>.
-            </div>
+            <Card className="cloudie-table-card overflow-hidden">
+              <CardContent className="p-6">
+                <AdminEmpty
+                  message="No design kits loaded yet."
+                  hint="Load them from New banking tenant."
+                />
+              </CardContent>
+            </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {templates.map((tpl: any) => {
                 const applied = activeKit === tpl.slug;
                 const isDark = tpl.themeMode === "dark";
                 return (
-                  <div key={tpl._id}
-                    className={`rounded-2xl border p-4 space-y-3 ${applied ? "border-slate-900 dark:border-white" : "border-slate-200 dark:border-slate-800"} bg-white dark:bg-slate-900`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-semibold truncate">{tpl.name}</span>
-                          {applied && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold"><Check className="h-3 w-3" /> Applied</span>}
+                  <Card
+                    key={tpl._id}
+                    className={cn(
+                      "cloudie-table-card overflow-hidden transition border",
+                      applied
+                        ? "border-cloudie-ring"
+                        : "border-cloudie-border",
+                    )}
+                  >
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold truncate">
+                              {tpl.name}
+                            </span>
+                            {applied && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 border border-success/30 px-2 py-0.5 text-[10px] font-semibold text-success">
+                                <Check className="size-3" />
+                                Applied
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-2">
+                            {tpl.description}
+                          </p>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{tpl.description}</p>
+                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-cloudie-border bg-cloudie-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {isDark ? (
+                            <Moon className="size-3" />
+                          ) : (
+                            <Sun className="size-3" />
+                          )}{" "}
+                          {isDark ? "Dark" : "Light"}
+                        </span>
                       </div>
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 px-2 py-0.5 text-[10px] text-slate-500">
-                        {isDark ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}{isDark ? "Dark" : "Light"}
-                      </span>
-                    </div>
 
-                    <div className="grid gap-2 text-[11px] sm:grid-cols-2">
-                      <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-2.5">
-                        <p className="font-semibold uppercase tracking-wider text-slate-400 text-[10px]">Customer app</p>
-                        <p className="mt-0.5 text-slate-600 dark:text-slate-300">{tpl.customerAppStyle}</p>
+                      <div className="grid gap-2 text-[11px] sm:grid-cols-2">
+                        <div className="rounded-xl bg-cloudie-muted/40 p-2.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Customer app
+                          </p>
+                          <p className="mt-0.5 text-sm">
+                            {tpl.customerAppStyle}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-cloudie-muted/40 p-2.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Admin console
+                          </p>
+                          <p className="mt-0.5 text-sm">
+                            {tpl.adminConsoleStyle}
+                          </p>
+                        </div>
                       </div>
-                      <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-2.5">
-                        <p className="font-semibold uppercase tracking-wider text-slate-400 text-[10px]">Admin console</p>
-                        <p className="mt-0.5 text-slate-600 dark:text-slate-300">{tpl.adminConsoleStyle}</p>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      {[tpl.primaryColor, tpl.accentColor, tpl.surfaceColor].filter(Boolean).map((c: string, i: number) => (
-                        <span key={i} className="h-4 w-4 rounded-full border border-black/10" style={{ backgroundColor: c }} />
-                      ))}
-                      <span className="text-[10px] text-slate-400">{tpl.currency} · radius {tpl.radius}</span>
-                      <button
-                        disabled={busy || applied}
-                        onClick={() => doApplyTemplate(tpl.slug)}
-                        className="ml-auto rounded-xl bg-slate-900 text-white px-3.5 py-2 text-xs font-semibold disabled:opacity-40 dark:bg-white dark:text-slate-900"
-                      >
-                        {pendingSlug === tpl.slug ? "Applying…" : applied ? "Applied" : "Apply kit"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {[tpl.primaryColor, tpl.accentColor, tpl.surfaceColor]
+                          .filter(Boolean)
+                          .map((c: string, i: number) => (
+                            <span
+                              key={i}
+                              className="h-4 w-4 rounded-full border border-border"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        <span className="text-[10px] text-muted-foreground">
+                          {tpl.currency} · radius {tpl.radius}
+                        </span>
+                        <Button
+                          disabled={busy || applied}
+                          size="sm"
+                          className="ml-auto gap-1.5"
+                          onClick={() => doApplyTemplate(tpl.slug)}
+                        >
+                          {pendingSlug === tpl.slug ? (
+                            "Applying…"
+                          ) : applied ? (
+                            "Applied"
+                          ) : (
+                            "Apply kit"
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
           )}
 
-          <div className="text-xs text-slate-400 flex items-center gap-1">
-            <ExternalLink className="h-3 w-3" /> Applying a kit never deletes tenant data — it restyles both surfaces and is recorded in the audit log.
-          </div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <ExternalLink className="size-3" />
+            Applying a kit never deletes tenant data — it restyles both
+            surfaces and is recorded in the audit log.
+          </p>
         </div>
       )}
 
       {tab === "settings" && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
-            <div className="text-sm font-semibold"><DollarSign className="h-4 w-4 inline" /> Fees, limits & branding</div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <label className="space-y-1.5 text-sm"><span className="font-medium">Transfer fee (cents/minor)</span><input type="number" value={feeForm.transferFeeMinor} onChange={e => setFeeForm({ ...feeForm, transferFeeMinor: e.target.value })} placeholder={fee ? String(fee.transferFeeMinor) : "0"} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm dark:bg-slate-800 dark:border-slate-700" /></label>
-              <label className="space-y-1.5 text-sm"><span className="font-medium">Withdrawal fee (minor)</span><input type="number" value={feeForm.withdrawalFeeMinor} onChange={e => setFeeForm({ ...feeForm, withdrawalFeeMinor: e.target.value })} placeholder={fee ? String(fee.withdrawalFeeMinor) : "0"} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm dark:bg-slate-800 dark:border-slate-700" /></label>
-              <label className="space-y-1.5 text-sm"><span className="font-medium">Per-transaction max (minor)</span><input type="number" value={feeForm.perTransactionLimitMinor} onChange={e => setFeeForm({ ...feeForm, perTransactionLimitMinor: e.target.value })} placeholder={(fee as any)?.perTransactionLimitMinor ?? ""} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm dark:bg-slate-800 dark:border-slate-700" /></label>
-              <label className="space-y-1.5 text-sm"><span className="font-medium">Min transaction (minor)</span><input type="number" value={feeForm.minTransactionMinor} onChange={e => setFeeForm({ ...feeForm, minTransactionMinor: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm dark:bg-slate-800 dark:border-slate-700" /></label>
-              <label className="space-y-1.5 text-sm"><span className="font-medium">Daily transfer limit (minor)</span><input type="number" value={feeForm.dailyTransferLimitMinor} onChange={e => setFeeForm({ ...feeForm, dailyTransferLimitMinor: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm dark:bg-slate-800 dark:border-slate-700" /></label>
-              <label className="space-y-1.5 text-sm"><span className="font-medium">Daily withdrawal limit (minor)</span><input type="number" value={feeForm.dailyWithdrawalLimitMinor} onChange={e => setFeeForm({ ...feeForm, dailyWithdrawalLimitMinor: e.target.value })} className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm dark:bg-slate-800 dark:border-slate-700" /></label>
+        <Card className="cloudie-table-card overflow-hidden">
+          <CardHeader className="border-b border-cloudie-border bg-cloudie-muted/30 p-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="size-4 text-electric" />
+              <CardTitle className="text-base">Fees, limits & branding</CardTitle>
             </div>
-            <button disabled={busy} onClick={saveFees} className="rounded-xl bg-slate-900 text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">Save fees & limits (audited)</button>
-            <div className="text-xs text-slate-400">Current: transfer {fee?.transferFeeMinor ?? 0}c · withdrawal {fee?.withdrawalFeeMinor ?? 0}c · perTx {(fee as any)?.perTransactionLimitMinor ?? "∅"} · dailyTx {(fee as any)?.dailyTransferLimitMinor ?? "∅"}</div>
-          </div>
-        </div>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Transfer fee (cents/minor)</span>
+                  <Input
+                    type="number"
+                    value={feeForm.transferFeeMinor}
+                    onChange={(e) =>
+                      setFeeForm({
+                        ...feeForm,
+                        transferFeeMinor: e.target.value,
+                      })
+                    }
+                    placeholder={fee ? String(fee.transferFeeMinor) : "0"}
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Withdrawal fee (minor)</span>
+                  <Input
+                    type="number"
+                    value={feeForm.withdrawalFeeMinor}
+                    onChange={(e) =>
+                      setFeeForm({
+                        ...feeForm,
+                        withdrawalFeeMinor: e.target.value,
+                      })
+                    }
+                    placeholder={fee ? String(fee.withdrawalFeeMinor) : "0"}
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Per-transaction max (minor)</span>
+                  <Input
+                    type="number"
+                    value={feeForm.perTransactionLimitMinor}
+                    onChange={(e) =>
+                      setFeeForm({
+                        ...feeForm,
+                        perTransactionLimitMinor: e.target.value,
+                      })
+                    }
+                    placeholder={(fee as any)?.perTransactionLimitMinor ?? ""}
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Min transaction (minor)</span>
+                  <Input
+                    type="number"
+                    value={feeForm.minTransactionMinor}
+                    onChange={(e) =>
+                      setFeeForm({
+                        ...feeForm,
+                        minTransactionMinor: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Daily transfer limit (minor)</span>
+                  <Input
+                    type="number"
+                    value={feeForm.dailyTransferLimitMinor}
+                    onChange={(e) =>
+                      setFeeForm({
+                        ...feeForm,
+                        dailyTransferLimitMinor: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+                <label className="space-y-1.5 text-sm">
+                  <span className="font-medium">Daily withdrawal limit (minor)</span>
+                  <Input
+                    type="number"
+                    value={feeForm.dailyWithdrawalLimitMinor}
+                    onChange={(e) =>
+                      setFeeForm({
+                        ...feeForm,
+                        dailyWithdrawalLimitMinor: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <Button
+                  disabled={busy}
+                  variant="default"
+                  className="gap-2"
+                  onClick={saveFees}
+                >
+                  Save fees & limits (audited)
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Current: transfer {fee?.transferFeeMinor ?? 0}c · withdrawal{" "}
+                  {fee?.withdrawalFeeMinor ?? 0}c · perTx{" "}
+                  {(fee as any)?.perTransactionLimitMinor ?? "∅"} · dailyTx{" "}
+                  {(fee as any)?.dailyTransferLimitMinor ?? "∅"}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
