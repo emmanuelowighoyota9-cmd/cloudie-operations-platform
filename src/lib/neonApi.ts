@@ -5,6 +5,13 @@ const API_BASE_URL = ((import.meta.env.VITE_API_BASE_URL as string | undefined) 
 const TOKEN_KEY = "cloudie_api_token";
 const USER_KEY = "cloudie_api_user";
 
+// Same-origin deployments (Vercel, the dev preview) authenticate with the
+// HttpOnly session cookie and never touch the token. When the API lives on a
+// different host, browsers refuse to store or send that cookie, so the
+// short-lived JWT from the login/register response is kept for the tab and sent
+// as a Bearer token. The API already accepts both.
+const USES_CROSS_ORIGIN_API = API_BASE_URL !== "";
+
 export type NeonUser = {
   id: string;
   email: string;
@@ -42,11 +49,12 @@ function readCsrfCookie() {
   return entry ? decodeURIComponent(entry.slice(prefix.length)) : null;
 }
 
-// The session token is deliberately never read from browser storage. Same-origin
-// requests authenticate with the server-issued HttpOnly cookie.
 export function getNeonToken() {
-  try { window.sessionStorage.removeItem(TOKEN_KEY); } catch { /* storage may be blocked */ }
-  return null;
+  if (!USES_CROSS_ORIGIN_API) {
+    try { window.sessionStorage.removeItem(TOKEN_KEY); } catch { /* storage may be blocked */ }
+    return null;
+  }
+  try { return window.sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
 }
 
 export function getCachedNeonUser(): NeonUser | null {
@@ -64,7 +72,8 @@ function notifyAuthChange(user: NeonUser | null) {
 
 function saveSession(session: NeonSession) {
   try {
-    window.sessionStorage.removeItem(TOKEN_KEY);
+    if (USES_CROSS_ORIGIN_API && session.token) window.sessionStorage.setItem(TOKEN_KEY, session.token);
+    else window.sessionStorage.removeItem(TOKEN_KEY);
     window.sessionStorage.setItem(USER_KEY, JSON.stringify(session.user));
     notifyAuthChange(session.user);
   } catch {

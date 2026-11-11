@@ -17,3 +17,4 @@ api/dist
 # Local libSQL/Turso development database; never a production artifact.
 .data/
 server/backups/
+.vercel

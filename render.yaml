@@ -1,17 +1,25 @@
 services:
+  # The API is a Node process (Hono + libSQL). `api/` only holds the Vercel
+  # function shim and the package manifest for this deploy, so the start command
+  # runs the real server from `backend/src/` with tsx (no build step needed).
   - type: web
     name: cloudie-neon-api
     runtime: node
+    plan: free
     rootDir: api
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
+    buildCommand: npm ci --include=dev --no-audit --no-fund
+    startCommand: ./node_modules/.bin/tsx ../backend/src/server.ts
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # The browser origin that is allowed to call this API. Same-origin
+      # deployments (Vercel) do not need an entry here.
       - key: CORS_ORIGINS
-        value: https://cloudie.wuaze.com
+        sync: false

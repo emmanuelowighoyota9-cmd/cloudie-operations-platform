@@ -43,9 +43,22 @@ export function resolveAuthRedirect(returnTo: string | null, fallback = "/dashbo
 export function describeAuthError(err: unknown, mode: "login" | "register"): string {
   const raw = err instanceof Error ? err.message : String(err ?? "");
   const text = `${raw} ${(err as { cause?: { message?: string } })?.cause?.message ?? ""}`;
+  const status = typeof (err as { status?: unknown })?.status === "number" ? (err as { status: number }).status : null;
 
   if (/failed to fetch|networkerror|load failed|econnrefused/i.test(text)) {
     return "Can't reach the server right now. Check your connection and try again.";
+  }
+  // 404/502/503/504 mean the request never reached the application: the API is
+  // missing or the server is down. Saying "try again" without that context is
+  // how a dead server looks like a bad password.
+  if (status === 404 || status === 502 || status === 503 || status === 504) {
+    return "The sign-in service isn't available right now. Please try again in a moment.";
+  }
+  if (status !== null && status >= 500) {
+    return "Something went wrong on our side. Please try again in a moment.";
+  }
+  if (/storage/i.test(text)) {
+    return "Your browser is blocking site storage. Allow cookies and storage for this site, then try again.";
   }
   if (/too many|rate limit|429/i.test(text)) {
     return "Too many attempts. Please wait a minute and try again.";

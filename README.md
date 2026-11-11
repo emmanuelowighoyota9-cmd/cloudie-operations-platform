@@ -11,7 +11,7 @@ Multi-service operations platform powered by **React + Vite + TypeScript** on Ve
 | Layer | Technology / Hosting | Location |
 | --- | --- | --- |
 | **Frontend SPA** | React 19, Vite, TypeScript, Tailwind CSS (Vercel static output) | `src/`, `public/` |
-| **Backend API** | Node.js 20+, Hono, Zod, JWT + Session Cookies + CSRF | `api/src/server.ts` |
+| **Backend API** | Node.js 20+, Hono, Zod, JWT + Session Cookies + CSRF | `backend/src/server.ts` (served by `api/[...path].js` on Vercel) |
 | **Database** | Turso/libSQL migration layer; legacy PostgreSQL migrations retained for rollback/reference | `migrations/turso/`, `migrations/001_*.sql` |
 
 ---
@@ -39,7 +39,7 @@ SOURCE_DATABASE_URL="postgresql://<source-user>:<password>@<source-host>/<db>?ss
 ### Legacy PostgreSQL migrations
 
 
-Ordered SQL migrations live in [`migrations/`](./migrations/) and are managed by [`api/scripts/migrate.mjs`](./api/scripts/migrate.mjs), which acquires a PostgreSQL advisory lock and verifies SHA-256 checksums in `schema_migrations`.
+Ordered SQL migrations live in [`migrations/`](./migrations/) and are managed by [`backend/scripts/migrate.mjs`](./backend/scripts/migrate.mjs), which acquires a PostgreSQL advisory lock and verifies SHA-256 checksums in `schema_migrations`.
 
 ```bash
 # Preview ordered migrations and checksums without touching a database
@@ -56,7 +56,7 @@ DATABASE_URL="postgresql://<user>:<password>@<neon-host>/<dbname>?sslmode=requir
 
 ## 2. Backend API (Vercel Functions + Turso)
 
-The API is exposed through [`api/[...path].ts`](./api/%5B...path%5D.ts) and the repository-root [`vercel.json`](./vercel.json). Deploy the repository root to Vercel; `/api/*` is handled by Hono.
+The API is exposed through [`api/index.ts`](./api/index.ts) and the repository-root [`vercel.json`](./vercel.json), which rewrites `/api/:path*` to that single function while preserving the original path for Hono's router. Bracket catch-all filenames (`api/[...path].js`) are Next.js-only and silently fall through to the SPA on a Vite project, so do not reintroduce one. Deploy the repository root to Vercel. The same server runs as a normal Node process on Render via [`render.yaml`](./render.yaml).
 
 - **Build command:** `npm install && npm run build`
 - **API route:** `/api/*` handled by the Vercel catch-all function
@@ -71,7 +71,15 @@ The API is exposed through [`api/[...path].ts`](./api/%5B...path%5D.ts) and the 
 | `TURSO_AUTH_TOKEN` | Turso auth token, server-side only |
 | `VITE_API_BASE_URL` | Optional only for cross-origin API deployments; leave unset for same-origin Vercel routing |
 | `JWT_SECRET` | Random 32+ byte secret used to sign session tokens |
-| `CORS_ORIGINS` | Exact Vercel production/preview origins and local development origins; add any custom domain explicitly |
+| `CORS_ORIGINS` | Only needed when the browser calls a *different* origin. Same-origin Vercel deployments (including preview URLs) are accepted automatically. |
+
+Do not set `VITE_API_BASE_URL` on Vercel: the SPA and the API share one origin there, and a value would send auth requests cross-origin.
+
+Run the Turso migrations once against the production database before the first sign-up. `/api/health` reports `database: connected` on an empty database, while registration still fails with a 500 until the tables exist:
+
+```bash
+TURSO_DATABASE_URL="libsql://<database>-<org>.turso.io" TURSO_AUTH_TOKEN="<token>" npm run migrate:turso
+```
 
 ### Local API Verification
 
@@ -84,7 +92,7 @@ npm --prefix api test
 
 ## 3. Legacy static deployment notes (InfinityFree; not the Vercel target)
 
-InfinityFree serves the compiled static SPA from `htdocs/` while all API requests go to Render (`VITE_NEON_API_URL`).
+InfinityFree serves the compiled static SPA from `htdocs/` while all API requests go to Render (`VITE_API_BASE_URL`). That build is cross-origin, so the API's `CORS_ORIGINS` must contain the exact frontend origin and sessions travel as Bearer tokens.
 
 ### Build Command
 
